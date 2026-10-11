@@ -1,0 +1,146 @@
+.card {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  margin: 0 0 14px;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  color: var(--color-text);
+  break-inside: avoid;
+  vertical-align: top;
+}
+
+.artworkFrame { position: relative; overflow: hidden; border-radius: inherit; background: var(--color-surface-raised); }
+.artworkLink { position: absolute; inset: 0; display: block; }
+
+.artwork {
+  object-fit: cover;
+  transition: transform 220ms ease;
+}
+
+.card:hover .artwork,
+.card:focus-within .artwork { transform: scale(1.015); }
+
+.missingImage { position: absolute; inset: 0; background: var(--color-surface-raised); }
+.cardText { padding: 8px 1px 1px; }
+
+.title {
+  display: block;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 13px;
+  line-height: 1.45;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model { margin: 2px 0 0; color: var(--color-text-muted); font-size: 11px; line-height: 1.4; }
+
+.hoverTools {
+  position: absolute;
+  inset: 0;
+  padding: 13px;
+  background: linear-gradient(180deg, rgb(0 0 0 / 38%) 0%, transparent 23%, transparent 49%, rgb(0 0 0 / 76%) 100%);
+  color: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.card:hover .hoverTools,
+.card:has(.hoverTools :focus) .hoverTools,
+.previewHover .hoverTools { opacity: 1; }
+
+.hoverTools .bookmark,
+.hoverTools .cardActions a,
+.hoverTools .cardActions button { pointer-events: auto; }
+
+.bookmark {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #171717;
+  cursor: pointer;
+}
+
+.bookmark:disabled { cursor: default; opacity: 0.7; }
+.bookmark.bookmarked { color: var(--color-action); }
+.bookmark.bookmarked svg { fill: currentColor; }
+
+.cardAuthor {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  text-shadow: 0 1px 4px rgb(0 0 0 / 45%);
+}
+
+.overlayCaption { position: absolute; right: 12px; bottom: 60px; left: 13px; display: grid; gap: 2px; text-shadow: 0 1px 4px rgb(0 0 0 / 50%); }
+.overlayCaption strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.overlayCaption span { font-size: 11px; }
+.previewHover .cardText { display: none; }
+
+.avatar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 60%);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 35%);
+  font-size: 13px;
+}
+
+.cardActions { position: absolute; right: 13px; bottom: 12px; left: 13px; display: flex; gap: 9px; }
+
+.viewButton,
+.copyButton {
+  display: inline-flex;
+  min-width: 0;
+  height: 37px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 22px;
+  background: #fff;
+  color: #171717;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.viewButton { flex: 1 1 auto; }
+.copyButton { flex: 0 0 38%; }
+
+@media (max-width: 680px) {
+  .title { font-size: 12px; }
+  .model { font-size: 10px; }
+  .hoverTools { padding: 8px; }
+  .bookmark { top: 8px; right: 8px; width: 32px; height: 32px; }
+  .cardAuthor { display: none; }
+  .overlayCaption { bottom: 49px; right: 8px; left: 8px; }
+  .overlayCaption strong { font-size: 11px; }
+  .overlayCaption span { font-size: 9px; }
+  .card:hover .hoverTools { opacity: 0; }
+  .card:has(.hoverTools :focus) .hoverTools { opacity: 1; }
+  .card.previewHover .hoverTools { opacity: 1; }
+  .previewHover .hoverTools a,
+  .previewHover .hoverTools button { pointer-events: auto; }
+  .cardActions { right: 7px; bottom: 7px; left: 7px; gap: 5px; }
+  .viewButton, .copyButton { height: 32px; font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artwork, .hoverTools { transition: none; }
+}

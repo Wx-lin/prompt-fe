@@ -1,0 +1,55 @@
+# AIGC 提示词库前端实施计划
+
+> **Goal:** 用可维护、SEO 友好且响应式的 Next.js 前端实现飞书 UI 文档中的提示词库页面。
+>
+> **Architecture:** Next.js App Router 服务端渲染公开内容与 metadata，FastAPI 保持独立 API。交互组件按 gallery、search、prompt-detail、auth 分域，Base UI 只负责无样式的复杂交互原语，CSS Modules 与主题 token 控制全部视觉。
+>
+> **Tech Stack:** Next.js、React、TypeScript、Base UI、CSS Modules、Vitest、React Testing Library、Playwright。
+
+## 参考与验收基线
+
+- 视觉来源：项目内 `docs/reference/ui/` 和飞书「UI」文档。
+- 产品边界：后端目录 `docs/aigc-prompt-PRD.md`、`docs/openapi.json` 与 `AGENT.md`。
+- 页面验收：浅色/暗黑首页、搜索展开/联想/结果、桌面详情弹窗、移动详情、登录、收藏登录态。
+- SEO 验收：公开详情可以直接 HTTP 请求和刷新，HTML 内已有主要详情内容、唯一 title/description/canonical/OG metadata 和正确状态码。
+- 响应式验收：桌面截图匹配设计基线；390 px 手机无横向溢出，关键操作保持可用。
+
+## 阶段一：脚手架、文档、基础样式与主题 · 已完成
+
+- [x] 去掉 Tailwind，安装 Base UI 与测试依赖，配置 lint、typecheck、unit、coverage、e2e 命令。
+- [x] 建立模块目录、API 环境变量、README、AGENT、PROGRESS 和此实施计划；归档必要的 UI 参考图。
+- [x] 测试主题偏好解析和主题切换，再实现全局浅/暗 theme tokens、reset、字体、focus 和 reduced-motion 基线。
+- [x] 验证：lint、typecheck、单元测试、production build。
+
+## 阶段二：首页导航与瀑布流 · 已完成，持续视觉校准
+
+- [x] 建立与 OpenAPI 匹配的 prompt/category 类型和服务端 API client，处理空列表与 API 不可用回退。
+- [x] 实现顶部品牌、搜索入口、主题/语言/账户入口、分类、筛选、瀑布流和复制/收藏入口。
+- [x] 从最新 UI 截图裁出临时素材，匹配桌面五列宽度与图像比例；手机使用双列并检查横向溢出。
+- [x] 验证：首页桌面/手机 Playwright、主题切换、lint、typecheck、coverage、build。
+
+## 阶段三：搜索体验 · 部分完成
+
+- [x] 测试最近搜索本地存储，加入热门搜索与 Base UI 搜索输入弹层；回车关闭弹层，在首页展示结果和空状态。
+- [ ] 完成输入联想、高亮、键盘导航、服务端热门词和分页。
+- [ ] 对照搜索展开、联想和结果页 UI 图进一步校准不同屏宽。
+
+## 阶段四：详情弹窗、独立详情路由与 SEO · 部分完成
+
+- [x] 实现 Next.js intercepting/parallel routes：画廊内以 modal 导航，直达 URL 输出服务端详情页与 metadata/canonical。
+- [x] 实现作品展示、作者/模型、提示词、复制、下载、分享、点赞/收藏入口和相似内容；手机详情固定复制操作。
+- [ ] 接入真实收藏/点赞 API、Base UI Dialog 的焦点管理和详情分页图组。
+- [x] 验证：直接打开详情、桌面/手机布局、画廊内弹层导航 E2E。
+
+## 阶段五：登录与个性化状态 · 部分完成
+
+- [x] 实现邮箱验证码发送/确认 UI 与 BFF；访问 token 只写入 HttpOnly、SameSite Cookie。
+- [ ] 配置 Google OAuth 客户端和完整登录回调；微信登录保持不实现。
+- [ ] 加入认证流程 mock E2E 与登录/已登录首页状态。
+
+## 阶段六：整体验收与交接 · 进行中
+
+- [x] 加入 sitemap、robots、默认 metadata、图片尺寸/加载策略和页面索引边界。
+- [ ] 对 UI 参考的每个页面状态运行 Playwright；检查浏览器 console、网络失败和服务端错误状态。
+- [ ] 运行 lint、typecheck、unit、coverage、e2e、production build；记录真实输出和环境限制。
+- [ ] 完成 README/AGENT/PROGRESS 与 TDD 证据记录，列出未接入的真实服务、部署步骤和后续缺口。

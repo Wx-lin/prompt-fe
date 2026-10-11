@@ -1,0 +1,6 @@
+.heading { padding: 0 34px 20px; }
+.heading h1 { margin: 0; font-size: 18px; font-weight: 600; }
+
+@media (max-width: 680px) {
+  .heading { padding: 4px 16px 16px; }
+}

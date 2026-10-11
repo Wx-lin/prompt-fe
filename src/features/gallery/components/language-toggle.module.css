@@ -1,0 +1,17 @@
+.language {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 13px;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+@media (max-width: 680px) {
+  .language { padding: 0 5px; font-size: 11px; }
+}

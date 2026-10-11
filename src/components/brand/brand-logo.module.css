@@ -1,0 +1,81 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 0;
+  color: var(--color-text);
+  transform: translateX(6px);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.wordmark {
+  position: relative;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -1.9px;
+  line-height: 1;
+}
+
+.pixelMark {
+  position: absolute;
+  top: -4px;
+  right: -7px;
+  display: grid;
+  grid-template-columns: repeat(2, 5px);
+  gap: 2px;
+  transform: rotate(-1deg);
+}
+
+.pixelMark i {
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+  background: #1264f5;
+}
+
+.pixelMark i:first-child {
+  grid-column: 2;
+}
+
+.divider {
+  width: 1px;
+  height: 30px;
+  margin-left: 35px;
+  margin-right: 22px;
+  background: var(--color-border-strong);
+}
+
+.productName {
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.compact .wordmark { font-size: 21px; letter-spacing: -0.9px; }
+.compact .pixelMark { grid-template-columns: repeat(2, 3px); gap: 1px; top: -2px; right: -4px; }
+.compact .pixelMark i { width: 3px; height: 3px; }
+.compact .divider { height: 16px; margin-left: 14px; margin-right: 11px; }
+.compact .productName { font-size: 13px; }
+
+@media (max-width: 760px) {
+  .logo {
+    gap: 0;
+    transform: none;
+  }
+
+  .wordmark {
+    font-size: 28px;
+  }
+
+  .productName {
+    font-size: 16px;
+  }
+
+  .divider {
+    height: 24px;
+    margin-left: 12px;
+    margin-right: 9px;
+  }
+}
