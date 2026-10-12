@@ -1,0 +1,78 @@
+.trigger { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; height: 44px; padding: 5px 7px 5px 5px; border: 1px solid transparent; border-radius: 24px; background: transparent; color: var(--color-text); cursor: pointer; }
+.trigger:hover, .trigger[data-popup-open] { background: var(--color-hover); border-color: var(--color-border); }
+.trigger:focus-visible { outline: 2px solid var(--color-text); outline-offset: 3px; }
+.trigger img, .avatar { display: grid; place-items: center; width: 34px; height: 34px; object-fit: cover; border-radius: 50%; background: var(--color-hover); color: var(--color-text); font-size: 13px; font-weight: 600; }
+.chevron { color: var(--color-text-muted); transition: transform 160ms ease; }
+.trigger[data-popup-open] .chevron { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .chevron { transition: none; } }
+
+.positioner { z-index: var(--z-popover); outline: 0; }
+
+.popup {
+  min-width: 180px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: 0 18px 50px var(--color-shadow);
+  outline: 0;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.popup[data-starting-style],
+.popup[data-ending-style] { opacity: 0; transform: translateY(-4px); }
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 10px;
+}
+
+.identityAvatar {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--color-hover);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.identityAvatar img { display: block; width: 32px; height: 32px; object-fit: cover; border-radius: 50%; }
+
+.identityName {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.separator { height: 1px; margin: 2px 6px 6px; background: var(--color-border); }
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: var(--color-text);
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  outline: 0;
+}
+
+.item[data-highlighted] { background: var(--color-hover); }
+
+
+.preferencesTrigger { width: 32px; height: 38px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--color-text); font-size: 24px; cursor: pointer; }
+.preferencesTrigger:hover, .preferencesTrigger[data-popup-open] { background: var(--color-hover); }
+.preferencesTrigger:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

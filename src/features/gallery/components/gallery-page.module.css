@@ -1,0 +1,12 @@
+.page { min-height: 100vh; background: var(--color-page); color: var(--color-text); }
+.demoNotice { margin: 0; padding: 0 34px 9px; color: var(--color-text-muted); font-size: 11px; }
+.searchSummary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px 16px; padding: 0 34px 20px; }
+.searchSummary h1 { margin: 0; overflow-wrap: anywhere; font-size: 16px; font-weight: 600; }
+.searchSummary span { color: var(--color-text-muted); font-size: 12px; }
+.searchSummary a { margin-left: auto; color: var(--color-text-muted); font-size: 13px; text-decoration: none; }
+.searchSummary a:hover { color: var(--color-text); }
+
+@media (max-width: 680px) {
+  .demoNotice { padding: 7px 16px 2px; font-size: 10px; }
+  .searchSummary { padding: 4px 16px 16px; }
+}

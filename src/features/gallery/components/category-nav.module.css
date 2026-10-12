@@ -1,0 +1,94 @@
+.nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.item {
+  position: relative;
+  display: inline-flex;
+  height: 100%;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-family: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.item.active {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.item.active::after {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: currentColor;
+  content: "";
+}
+
+.moreTrigger svg { flex-shrink: 0; transition: transform 160ms ease; }
+
+.positioner { z-index: var(--z-popover); outline: 0; }
+
+.popup {
+  width: min(420px, 90vw);
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+  box-shadow: 0 18px 50px var(--color-shadow);
+  outline: 0;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.popup[data-starting-style],
+.popup[data-ending-style] { opacity: 0; transform: translateY(-4px); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.gridItem {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--color-text);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.gridItem:hover { background: var(--color-hover); }
+.gridItemActive { background: var(--color-hover); font-weight: 600; }
+
+@media (max-width: 680px) {
+  .nav { height: 40px; }
+  .item { padding: 0 10px; font-size: 12px; }
+  .grid { grid-template-columns: 1fr; }
+}
+
+.item:hover { color: var(--color-text); }
+.item:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; border-radius: 4px; }
+@media (max-width: 680px) { .nav { width: 100%; overflow-x: auto; scrollbar-width: none; } .nav::-webkit-scrollbar { display: none; } }
+
+.nav { overflow-x: auto; scrollbar-width: none; }
+.nav::-webkit-scrollbar { display: none; }

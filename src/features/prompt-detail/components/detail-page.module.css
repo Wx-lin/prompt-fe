@@ -1,0 +1,80 @@
+.page { position: fixed; z-index: var(--z-modal); inset: 0; display: grid; place-items: center; padding: 48px 5.2vw; color: var(--color-text); }
+.backdrop { position: absolute; inset: 0; background: var(--color-overlay); }
+.dialog {
+  position: relative;
+  display: flex;
+  width: min(1200px, 100%);
+  max-width: 100%;
+  height: min(827px, calc(100vh - 96px));
+  overflow: hidden;
+  border-radius: var(--radius-dialog);
+  background: var(--color-surface);
+  box-shadow: 0 24px 80px var(--color-shadow);
+}
+.artworkPane {
+  position: relative;
+  flex: 1 1 0;
+  width: auto;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--color-media-stage);
+}
+.artworkPane > img { object-fit: contain; }
+.desktopClose,.download { position: absolute; z-index: 1; top: 18px; display: grid; width: 40px; height: 40px; place-items: center; border: 0; border-radius: 50%; background: rgb(255 255 255 / 90%); color: #171717; text-decoration: none; cursor: pointer; }
+.desktopClose { left: 18px; font-size: 25px; }
+.download { right: 18px; }
+.imageCount { position: absolute; bottom: 22px; left: 50%; padding: 7px 12px; transform: translateX(-50%); border-radius: 20px; background: rgb(0 0 0 / 60%); color: white; font-size: 12px; }
+.imageNav { position: absolute; z-index: 1; top: 50%; display: grid; width: 40px; height: 40px; place-items: center; border: 0; border-radius: 50%; background: rgb(255 255 255 / 90%); color: #171717; cursor: pointer; transform: translateY(-50%); transition: background-color .15s; }
+.imageNav:hover { background: white; }
+.imageNavPrev { left: 18px; }
+.imageNavNext { right: 18px; }
+.details { flex: 0 0 400px; overflow: auto; padding: 38px 38px 30px; }
+.details h1 { margin: 30px 0 16px; font-size: 29px; line-height: 1.25; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tags span { padding: 6px 11px; border-radius: 18px; background: var(--color-hover); color: var(--color-text-muted); font-size: 11px; }
+.promptSection { margin-top: 25px; padding-top: 21px; border-top: 1px solid var(--color-border); }
+.promptSection h2,.recommendations h2 { margin: 0 0 12px; font-size: 15px; }
+.promptSection h2 small { margin-left: 7px; color: var(--color-text-muted); font-size: 12px; font-weight: 400; }
+.promptSection p { margin: 0; font-size: 14px; line-height: 1.85; white-space: pre-wrap; }
+.description { margin-top: 12px !important; color: var(--color-text-muted); }
+.copy { display: flex; width: 100%; height: 50px; align-items: center; justify-content: center; gap: 9px; border: 0; border-radius: 12px; background: var(--color-action); color: var(--color-action-text); font-size: 14px; font-weight: 600; cursor: pointer; }
+.details > .copy { margin-top: 21px; }
+.engagement { display: flex; gap: 22px; margin: 18px 0 24px; }
+.engagement button { display: flex; align-items: center; gap: 7px; border: 0; background: transparent; color: var(--color-text-muted); font-size: 12px; cursor: pointer; }
+.engagement button:disabled { cursor: default; opacity: 0.7; }
+.engagement button.active { color: var(--color-action); }
+.engagement button.active svg { fill: currentColor; }
+.recommendations { border-top: 1px solid var(--color-border); padding-top: 18px; }
+.recommendations > div { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.recommendations a { min-width: 0; text-decoration: none; }
+.recommendations img { width: 100%; height: 105px; border-radius: 6px; object-fit: cover; }
+.recommendations span { display: block; overflow: hidden; margin-top: 4px; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.mobileHeader,.mobileCopy { display: none; }
+@media (max-width: 760px) {
+  .page { position: fixed; inset: 0; display: block; padding: 0; overflow: auto; background: var(--color-page); }
+  .backdrop { display: none; }
+  .mobileHeader { position: sticky; z-index: 2; top: 0; display: flex; height: 54px; align-items: center; justify-content: space-between; padding: 0 14px; border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+  .mobileHeader :global(.logo) { gap: 8px; }
+  .mobileHeader :global(.productName),.mobileHeader :global(.divider) { display: none; }
+  .back,.mobileHeader > button { display: grid; width: 34px; height: 34px; place-items: center; border: 0; background: transparent; color: var(--color-text); font-size: 27px; text-decoration: none; }
+  .dialog { display: block; width: 100%; height: auto; min-height: calc(100vh - 54px); overflow: visible; border-radius: 0; box-shadow: none; }
+  .artworkPane { width: 100%; max-width: 100%; height: auto; min-width: 0; aspect-ratio: var(--art-ratio, 3 / 4); max-height: 78vh; }
+  .desktopClose { display: none; }
+  .download { top: 12px; right: 14px; width: 36px; height: 36px; }
+  .imageNav { width: 34px; height: 34px; }
+  .imageNavPrev { left: 10px; }
+  .imageNavNext { right: 10px; }
+  .imageCount { bottom: 12px; }
+  .details { flex: 1 1 auto; overflow: visible; padding: 22px 20px 100px; }
+  .details h1 { margin: 19px 0 13px; font-size: 24px; }
+  .promptSection { margin-top: 20px; padding-top: 18px; }
+  .promptSection p { font-size: 14px; }
+  .details > .copy { display: none; }
+  .mobileCopy { position: fixed; z-index: 3; right: 0; bottom: 0; left: 0; display: block; padding: 10px 20px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--color-border); background: color-mix(in srgb, var(--color-surface) 94%, transparent); }
+  .mobileCopy .copy { height: 48px; border-radius: 25px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artworkPane { transition: none; }
+}

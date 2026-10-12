@@ -1,0 +1,10 @@
+.heading { padding: 28px 34px 24px; }
+.heading h1 { margin: 0; font-size: 18px; font-weight: 600; }
+
+@media (max-width: 900px) {
+  .heading { padding: 24px 16px 16px; }
+}
+
+@media (max-width: 680px) {
+  .heading { padding: 20px 16px 12px; }
+}

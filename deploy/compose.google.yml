@@ -1,0 +1,6 @@
+# Merge with the existing production Compose file, never use as a standalone stack.
+services:
+  frontend:
+    build:
+      args:
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:?Set the public Google OAuth client ID before building}

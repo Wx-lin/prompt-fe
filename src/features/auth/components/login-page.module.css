@@ -1,0 +1,29 @@
+.page { position: fixed; z-index: var(--z-modal); inset: 0; display: grid; place-items: center; padding: 24px; background: rgb(0 0 0 / 10%); color: var(--color-text); }
+.backdrop { position: fixed; inset: 0; background: var(--color-overlay); backdrop-filter: blur(12px); }
+.dialog { position: relative; z-index: 1; width: min(548px,100%); min-height: 650px; padding: 24px 42px 35px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); box-shadow: 0 20px 75px var(--color-shadow); text-align: center; }
+.dialogHeader { display: flex; align-items: center; justify-content: space-between; margin: 0 0 36px; }
+.close { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 50%; background: var(--color-hover); font-size: 20px; text-decoration: none; flex-shrink: 0; }
+.dialog h1 { margin: 0; font-size: 23px; font-weight: 650; }
+.subtitle { margin: 10px 0 26px; color: var(--color-text-muted); font-size: 13px; }
+.google { display: flex; width: 100%; height: 48px; align-items: center; justify-content: center; gap: 11px; border: 1px solid var(--color-border-strong); border-radius: 9px; background: var(--color-surface); color: var(--color-text); font-size: 14px; cursor: pointer; }
+.googleWrapper { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+.googleMark { flex-shrink: 0; }
+.divider { display: flex; align-items: center; gap: 12px; margin: 25px 0; color: var(--color-text-muted); font-size: 12px; }
+.divider::before,.divider::after { height: 1px; flex: 1; background: var(--color-border); content: ""; }
+.dialog form { display: flex; flex-direction: column; text-align: left; }
+.dialog label { margin: 0 0 8px; font-size: 13px; font-weight: 550; }
+.dialog input { height: 46px; margin-bottom: 18px; padding: 0 13px; border: 1px solid var(--color-border-strong); border-radius: 8px; background: var(--color-surface); color: var(--color-text); }
+.dialog input::placeholder { color: var(--color-text-muted); }
+.submit { height: 47px; border: 0; border-radius: 9px; background: var(--color-action); color: var(--color-action-text); font-weight: 600; cursor: pointer; }
+.submit:disabled { opacity: .6; cursor: wait; }
+.resend { margin-top: 12px; border: 0; background: transparent; color: var(--color-text-muted); font-size: 12px; cursor: pointer; }
+.hint { margin: 14px 0 0; color: var(--color-text-muted); font-size: 12px; }
+.message { min-height: 18px; margin: 12px 0 0; color: var(--color-text-muted); font-size: 12px; }
+.terms { margin: 19px 0 0; color: var(--color-text-muted); font-size: 11px; line-height: 1.7; }
+.terms a { color: var(--color-text-muted); text-decoration: underline; }
+@media (max-width: 600px) {
+  .page { padding: 16px; }
+  .dialog { min-height: auto; padding: 18px 24px 26px; }
+  .dialogHeader { margin: 0 -4px 28px; }
+  .dialog h1 { font-size: 20px; }
+}
