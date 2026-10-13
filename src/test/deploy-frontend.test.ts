@@ -7,6 +7,9 @@ describe('frontend release safeguards', () => {
     expect(script).toContain('sha256sum -c checksums.txt');
     expect(script).toContain('.release-deploy.lock');
     expect(script).toContain('.backend-deploy.lock');
+    expect(script).toContain('flock -w 600 9');
+    expect(script).toContain('flock -w 600 8');
+    expect(script).not.toContain('flock -n');
     expect(script.indexOf('sha256sum -c')).toBeLessThan(script.indexOf('docker load'));
     expect(script).toContain('Concurrent deployment detected');
     expect(script).toContain('rollback-');
