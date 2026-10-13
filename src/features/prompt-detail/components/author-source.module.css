@@ -3,14 +3,11 @@
 a.authorLink:hover strong { text-decoration: underline; text-underline-offset: 3px; }
 .avatar { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; overflow: hidden; border: 1px solid rgb(255 255 255 / 22%); border-radius: 50%; background: #f49979; box-shadow: 0 2px 9px rgb(34 31 71 / 15%); }
 .avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.identity { display: flex; min-width: 0; align-items: center; gap: 8px; }
-.identity strong { overflow: hidden; font-size: 14px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.identity { display: flex; min-width: 0; flex: 1; align-items: center; gap: 8px; }
+.identity strong { min-width: 0; overflow: hidden; font-size: 14px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .identity small { color: var(--color-text-muted); font-size: 11px; white-space: nowrap; }
-.platformIcon { display: inline-grid; width: 22px; height: 22px; flex: 0 0 22px; place-items: center; color: var(--icon-color); }
+.platformIcon { display: inline-grid; width: 24px; height: 24px; flex: 0 0 24px; place-items: center; color: var(--color-text); }
 .platformIcon::before { content: ""; display: block; width: 20px; height: 20px; background: currentColor; mask: var(--icon-url) center / contain no-repeat; -webkit-mask: var(--icon-url) center / contain no-repeat; }
-.platformIcon[data-platform="xiaohongshu"] { --icon-color: #ff2442; }
-.platformIcon[data-platform="weibo"] { --icon-color: #e6162d; }
-.platformIcon[data-platform="kuaishou"] { --icon-color: #ff4906; }
 .originalLink { flex: 0 0 auto; color: var(--color-text-muted); font-size: 12px; line-height: 1.4; text-decoration: none; white-space: nowrap; }
 .originalLink:hover { color: var(--color-text); text-decoration: underline; text-underline-offset: 3px; }
 .authorLink:focus-visible,.originalLink:focus-visible { outline: 2px solid var(--color-text); outline-offset: 3px; }

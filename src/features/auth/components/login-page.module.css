@@ -1,4 +1,4 @@
-.page { position: fixed; z-index: var(--z-modal); inset: 0; display: grid; place-items: center; padding: 24px; background: rgb(0 0 0 / 10%); color: var(--color-text); }
+.page { position: fixed; z-index: var(--z-modal); inset: 0; display: grid; place-items: safe center; overflow-y: auto; overscroll-behavior: contain; padding: 24px; background: rgb(0 0 0 / 10%); color: var(--color-text); }
 .backdrop { position: fixed; inset: 0; background: var(--color-overlay); backdrop-filter: blur(12px); }
 .dialog { position: relative; z-index: 1; width: min(548px,100%); min-height: 650px; padding: 24px 42px 35px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); box-shadow: 0 20px 75px var(--color-shadow); text-align: center; }
 .dialogHeader { display: flex; align-items: center; justify-content: space-between; margin: 0 0 36px; }

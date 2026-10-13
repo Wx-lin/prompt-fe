@@ -29,7 +29,7 @@
 .imageNav:hover { background: white; }
 .imageNavPrev { left: 18px; }
 .imageNavNext { right: 18px; }
-.details { flex: 0 0 400px; overflow: auto; padding: 38px 38px 30px; }
+.details { flex: 0 0 400px; overflow: auto; overscroll-behavior: contain; padding: 38px 38px 30px; }
 .details h1 { margin: 30px 0 16px; font-size: 29px; line-height: 1.25; }
 .tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .tags span { padding: 6px 11px; border-radius: 18px; background: var(--color-hover); color: var(--color-text-muted); font-size: 11px; }
@@ -52,7 +52,7 @@
 .recommendations span { display: block; overflow: hidden; margin-top: 4px; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .mobileHeader,.mobileCopy { display: none; }
 @media (max-width: 760px) {
-  .page { position: fixed; inset: 0; display: block; padding: 0; overflow: auto; background: var(--color-page); }
+  .page { position: fixed; inset: 0; display: block; padding: 0; overflow: auto; overscroll-behavior: contain; background: var(--color-page); }
   .backdrop { display: none; }
   .mobileHeader { position: sticky; z-index: 2; top: 0; display: flex; height: 54px; align-items: center; justify-content: space-between; padding: 0 14px; border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
   .mobileHeader :global(.logo) { gap: 8px; }

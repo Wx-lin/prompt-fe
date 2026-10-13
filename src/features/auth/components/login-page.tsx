@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, MouseEvent } from "react";
+import { useScrollLock } from "@/lib/scroll/use-scroll-lock";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { Link, useRouter } from "@/i18n/navigation";
 import styles from "./login-page.module.css";
@@ -38,6 +39,7 @@ declare global {
 }
 
 export function LoginPage() {
+  useScrollLock();
   const t = useTranslations("login");
   const router = useRouter();
   const [email, setEmail] = useState("");

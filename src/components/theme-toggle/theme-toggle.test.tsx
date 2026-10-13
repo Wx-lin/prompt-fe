@@ -1,26 +1,19 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, expect, it, vi } from "vitest";
-import { ThemeToggle } from "@/components/theme-toggle/theme-toggle";
+import { expect, it, vi } from "vitest";
+import { ThemeToggle } from "./theme-toggle";
 import messages from "../../../messages/zh.json";
 
-function renderWithIntl(ui: React.ReactElement) {
-  return render(
-    <NextIntlClientProvider locale="zh" messages={messages}>
-      {ui}
-    </NextIntlClientProvider>,
-  );
-}
-
-describe("ThemeToggle", () => {
-  it("announces the next theme and requests a toggle", async () => {
-    const user = userEvent.setup();
-    const onToggle = vi.fn();
-
-    renderWithIntl(<ThemeToggle theme="light" onToggle={onToggle} />);
-    await user.click(screen.getByRole("button", { name: "切换到暗黑模式" }));
-
-    expect(onToggle).toHaveBeenCalledOnce();
-  });
+it("offers system, light and dark preferences with the current selection", async () => {
+  const user = userEvent.setup();
+  const onPreferenceChange = vi.fn();
+  render(<NextIntlClientProvider locale="zh" messages={messages}>
+    <ThemeToggle theme="light" preference="system" onPreferenceChange={onPreferenceChange} />
+  </NextIntlClientProvider>);
+  await user.click(screen.getByRole("combobox", { name: /主题/ }));
+  expect(screen.getByRole("option", { name: "跟随系统" })).toHaveAttribute("aria-selected", "true");
+  expect(screen.getByRole("option", { name: "浅色模式" })).toBeVisible();
+  await user.click(screen.getByRole("option", { name: "暗黑模式" }));
+  expect(onPreferenceChange).toHaveBeenCalledWith("dark");
 });

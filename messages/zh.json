@@ -12,8 +12,10 @@
     "homeAriaLabel": "AIGC 绘图提示词库首页"
   },
   "theme": {
-    "switchToDark": "切换到暗黑模式",
-    "switchToLight": "切换到浅色模式"
+    "label": "主题",
+    "system": "跟随系统",
+    "light": "浅色模式",
+    "dark": "暗黑模式"
   },
   "header": {
     "searchPlaceholder": "搜索风格、场景或提示词",

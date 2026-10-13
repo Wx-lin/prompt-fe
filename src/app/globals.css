@@ -2,10 +2,13 @@
 
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar) transparent;
 }
 
 html {
   min-width: 320px;
+  scrollbar-gutter: stable;
   background: var(--color-page);
 }
 
@@ -58,4 +61,23 @@ select:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Keep background scroll position while route overlays scroll independently. */
+html[data-scroll-locked="true"],
+html[data-scroll-locked="true"] body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+@supports not (scrollbar-width: thin) {
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: var(--color-scrollbar);
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--color-scrollbar-hover); }
 }

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import type { CSSProperties, MouseEvent } from "react";
+import { useScrollLock } from "@/lib/scroll/use-scroll-lock";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { Icon } from "@/components/icons/icon";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -12,6 +13,7 @@ import { AuthorSource } from "./author-source";
 import styles from "./detail-page.module.css";
 
 export function DetailPage({ prompt, recommendations = [] }: { prompt: PromptDetail | GalleryCard; recommendations?: GalleryCard[] }) {
+  useScrollLock();
   const t = useTranslations("detail");
   const router = useRouter();
   const [copied, setCopied] = useState(false);

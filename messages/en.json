@@ -12,8 +12,10 @@
     "homeAriaLabel": "AIGC Prompt Gallery home"
   },
   "theme": {
-    "switchToDark": "Switch to dark mode",
-    "switchToLight": "Switch to light mode"
+    "label": "Theme",
+    "system": "System",
+    "light": "Light mode",
+    "dark": "Dark mode"
   },
   "header": {
     "searchPlaceholder": "Search styles, scenes, or prompts",
