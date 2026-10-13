@@ -45,7 +45,8 @@
     "myWorks": "My artworks",
     "language": "Language",
     "back": "Back",
-    "appearance": "Appearance"
+    "appearance": "Appearance",
+    "sortRecommended": "Recommended"
   },
   "categories": {
     "portrait": "Portraits",

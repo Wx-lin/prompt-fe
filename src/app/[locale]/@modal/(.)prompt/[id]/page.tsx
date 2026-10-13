@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getRecommendations } from "@/features/prompt-detail/lib/recommendations";
 import { DetailPage } from "@/features/prompt-detail/components/detail-page";
 import { demoPrompts } from "@/features/gallery/data/demo-prompts";
 import { getSessionToken } from "@/lib/auth/session";
@@ -20,6 +21,6 @@ export default async function PromptModalRoute({ params }: { params: RouteParame
   const token = await getSessionToken();
   const prompt = await loadPrompt(id, token ?? undefined);
   if (!prompt) notFound();
-  const recommendations = demoPrompts.filter((item) => item.id !== id);
+  const recommendations = await getRecommendations(id);
   return <DetailPage prompt={prompt} recommendations={recommendations} />;
 }

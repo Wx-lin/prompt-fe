@@ -40,7 +40,7 @@ export function SiteHeader({
   const filters = new URLSearchParams();
   if (query) filters.set("q", query);
   if (activeCategory !== "all") filters.set("category", activeCategory);
-  if (activeSort !== "latest") filters.set("sort", activeSort);
+  if (activeSort !== "recommended" || query) filters.set("sort", activeSort);
   if (activeModel !== "all") filters.set("models", activeModel);
   const popoverFilters = new URLSearchParams(filters);
   popoverFilters.delete("q");
@@ -53,6 +53,7 @@ export function SiteHeader({
   }
 
   const sortOptions = [
+    { label: t("sortRecommended"), value: "recommended" },
     { label: t("sortLatest"), value: "latest" },
     { label: t("sortPopular"), value: "popular" },
     { label: t("sortHot"), value: "hot" },

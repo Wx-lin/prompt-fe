@@ -93,7 +93,7 @@ describe("existing API request contracts", () => {
   it("keeps feed defaults and passes category, model, sort, and pagination to the backend", async () => {
     const fetchMock = mockSearchApi([]);
     await getPromptFeed();
-    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/prompts?page=1&page_size=20&sort=latest");
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/prompts?page=1&page_size=20&sort=recommended");
     await getPromptFeed({ category: "food", model: "FLUX.1", sort: "hot", page: 2, pageSize: 10 });
     const params = new URL(fetchMock.mock.calls[1][0]).searchParams;
     expect(Object.fromEntries(params)).toEqual({ category: "food", models: "FLUX.1", sort: "hot", page: "2", page_size: "10" });
@@ -132,5 +132,17 @@ describe("upstream request deadline", () => {
     for (const [, options] of fetchMock.mock.calls) {
       expect(options.signal).toBeInstanceOf(AbortSignal);
     }
+  });
+});
+
+describe("getSimilarPrompts", () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+  it("requests encoded similar ID as a publicly cached request without auth", async () => {
+    vi.stubEnv("API_BASE_URL", "http://api.test/");
+    const fetcher = vi.fn().mockResolvedValue(Response.json([prompt(1)]));
+    vi.stubGlobal("fetch", fetcher);
+    const { getSimilarPrompts } = await import("./client");
+    expect(await getSimilarPrompts("a/b ?")).toEqual([prompt(1)]);
+    expect(fetcher).toHaveBeenCalledWith("http://api.test/api/prompts/a%2Fb%20%3F/similar", expect.objectContaining({ headers: { Accept: "application/json" }, next: { revalidate: 60 } }));
   });
 });

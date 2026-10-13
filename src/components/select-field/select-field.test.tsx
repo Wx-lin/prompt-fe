@@ -3,8 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { SelectField } from "./select-field";
 const push = vi.hoisted(() => vi.fn());
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), useSearchParams: () => new URLSearchParams("q=cat&category=portrait") }));
+const params = vi.hoisted(() => ({ value: "q=cat&category=portrait" }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), useSearchParams: () => new URLSearchParams(params.value) }));
 beforeEach(() => {
+  params.value = "q=cat&category=portrait";
   class TestPointerEvent extends MouseEvent {
     readonly pointerType: string;
     constructor(type: string, init: PointerEventInit = {}) { super(type, init); this.pointerType = init.pointerType ?? "mouse"; }
@@ -51,4 +53,20 @@ it("hides a redundant singleton family title while preserving the selectable val
   expect(within(screen.getByRole("group", { name: "Midjourney" })).getAllByRole("option")).toHaveLength(2);
   await user.click(screen.getByRole("option", { name: "FLUX" }));
   expect(push).toHaveBeenCalledWith("/?q=cat&category=portrait&models=FLUX");
+});
+it("keeps latest explicit because the homepage default is recommended", async () => {
+  const user = userEvent.setup();
+  render(<SelectField label="Sort" name="sort" defaultValue="recommended" options={[{ label: "Recommended", value: "recommended" }, { label: "Latest", value: "latest" }]} />);
+  await user.click(screen.getByRole("combobox", { name: "Sort" }));
+  await user.click(await screen.findByRole("option", { name: "Latest" }));
+  expect(push).toHaveBeenCalledWith("/?q=cat&category=portrait&sort=latest");
+});
+
+it.each([["category=portrait&models=FLUX&sort=latest", "/?category=portrait&models=FLUX"], ["q=cat&category=portrait&sort=latest", "/?q=cat&category=portrait&sort=recommended"]])("selects recommended with contextual URL defaults (%s)", async (query, expected) => {
+  params.value = query;
+  render(<SelectField label="Sort" name="sort" defaultValue="latest" options={[{ label: "Recommended", value: "recommended" }, { label: "Latest", value: "latest" }]} />);
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("combobox", { name: "Sort" }));
+  await user.click(await screen.findByRole("option", { name: "Recommended" }));
+  expect(push).toHaveBeenCalledWith(expected);
 });

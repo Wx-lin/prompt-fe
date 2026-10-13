@@ -33,3 +33,30 @@ it("does not substitute demo labels when the production catalog is unavailable",
   const page = await Home({ params: Promise.resolve({ locale: "zh" }), searchParams: Promise.resolve({}) });
   expect(page.props.models).toEqual([]);
 });
+it("defaults home to recommended but keyword search to latest", async () => {
+  vi.stubEnv("NODE_ENV", "production");
+  api.getModels.mockResolvedValue([]);
+  api.searchPrompts.mockResolvedValue({ items: [], has_more: false });
+  const home = await Home({ params: Promise.resolve({ locale: "zh" }), searchParams: Promise.resolve({}) });
+  expect(home.props.activeSort).toBe("recommended");
+  expect(api.getPromptFeed).toHaveBeenCalledWith(expect.objectContaining({ sort: "recommended" }));
+  const search = await Home({ params: Promise.resolve({ locale: "zh" }), searchParams: Promise.resolve({ q: "cat" }) });
+  expect(search.props.activeSort).toBe("latest");
+  expect(api.searchPrompts).toHaveBeenCalledWith("cat", expect.objectContaining({ sort: "latest" }));
+});
+it.each(["recommended", "latest", "popular", "hot"])("passes explicit %s with category and model to the backend", async sort => {
+  vi.stubEnv("NODE_ENV", "production");
+  api.getModels.mockResolvedValue([]);
+  const page = await Home({ params: Promise.resolve({ locale: "zh" }), searchParams: Promise.resolve({ sort, category: "art", models: "FLUX" }) });
+  expect(page.props.activeSort).toBe(sort);
+  expect(api.getPromptFeed).toHaveBeenCalledWith({ sort, category: "art", model: "FLUX" });
+});
+it("preserves reference demo composition for recommended while popular sorts by likes", async () => {
+  vi.stubEnv("NODE_ENV", "development");
+  vi.stubEnv("AIGC_DEMO_MODE", "true");
+  const recommended = await Home({ params: Promise.resolve({ locale: "zh" }), searchParams: Promise.resolve({}) });
+  const popular = await Home({ params: Promise.resolve({ locale: "zh" }), searchParams: Promise.resolve({ sort: "popular" }) });
+  expect(recommended.props.activeSort).toBe("recommended");
+  expect(popular.props.items.map((item: {like_count: number}) => item.like_count)).toEqual([...popular.props.items.map((item: {like_count: number}) => item.like_count)].sort((a, b) => b - a));
+  expect(recommended.props.items.map((item: {id: string}) => item.id)).not.toEqual(popular.props.items.map((item: {id: string}) => item.id));
+});

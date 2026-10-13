@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
+import { getRecommendations } from "@/features/prompt-detail/lib/recommendations";
 import { DetailPage } from "@/features/prompt-detail/components/detail-page";
 import { demoPrompts } from "@/features/gallery/data/demo-prompts";
 import { defaultLocale } from "@/i18n/routing";
@@ -39,6 +40,6 @@ export default async function PromptRoute({ params }: { params: RouteParameters 
   const token = await getSessionToken();
   const prompt = await loadPrompt(id, token ?? undefined);
   if (!prompt) notFound();
-  const recommendations = demoPrompts.filter((item) => item.id !== id);
+  const recommendations = await getRecommendations(id);
   return <DetailPage prompt={prompt} recommendations={recommendations} />;
 }

@@ -1,5 +1,5 @@
 import "server-only";
-import type { Category, CurrentUser, PromptDetail, PromptListResponse } from "@/types/prompt";
+import type { Category, CurrentUser, PromptDetail, PromptListItem, PromptListResponse } from "@/types/prompt";
 import { fallbackCategories } from "@/features/gallery/data/categories";
 
 const defaultApiBaseUrl = "http://localhost:8000";
@@ -34,7 +34,7 @@ export interface PromptQuery {
 }
 
 export async function getPromptFeed(query: PromptQuery = {}): Promise<PromptListResponse> {
-  const params = new URLSearchParams({ page: String(query.page ?? 1), page_size: String(query.pageSize ?? 20), sort: query.sort ?? "latest" });
+  const params = new URLSearchParams({ page: String(query.page ?? 1), page_size: String(query.pageSize ?? 20), sort: query.sort ?? "recommended" });
   if (query.category && query.category !== "all") params.set("category", query.category);
   if (query.model && query.model !== "all") params.append("models", query.model);
   return request<PromptListResponse>(`/api/prompts?${params.toString()}`);
@@ -64,6 +64,10 @@ export async function getModels(): Promise<ModelOption[]> {
 
 export async function getPromptDetail(id: string, accessToken?: string): Promise<PromptDetail> {
   return request<PromptDetail>(`/api/prompts/${encodeURIComponent(id)}`, accessToken);
+}
+
+export async function getSimilarPrompts(id: string): Promise<PromptListItem[]> {
+  return request<PromptListItem[]>(`/api/prompts/${encodeURIComponent(id)}/similar`);
 }
 
 export async function getCategories(): Promise<Category[]> {

@@ -22,9 +22,9 @@ export default async function Home({ params, searchParams }: { params: RoutePara
   setRequestLocale(locale);
   const resolvedSearchParams = await searchParams;
   const activeCategory = firstValue(resolvedSearchParams.category) ?? "all";
-  const activeSort = firstValue(resolvedSearchParams.sort) ?? "latest";
   const activeModel = firstValue(resolvedSearchParams.models) ?? "all";
   const query = (firstValue(resolvedSearchParams.q) ?? "").trim();
+  const activeSort = firstValue(resolvedSearchParams.sort) ?? (query ? "latest" : "recommended");
   const useDemoContent = process.env.NODE_ENV !== "production" && process.env.AIGC_DEMO_MODE !== "false";
   const filters = { category: activeCategory, sort: activeSort, model: activeModel };
   const demoModels = [...new Set(demoPrompts.flatMap(item => item.models))].map(label => ({
@@ -44,7 +44,7 @@ export default async function Home({ params, searchParams }: { params: RoutePara
     `${item.title} ${item.category} ${item.models.join(" ")} ${item.promptText ?? ""}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
   );
   // Keep the unfiltered reference composition; interactive views use real sorting.
-  const keepReferenceOrder = !query && activeCategory === "all" && activeModel === "all" && activeSort === "latest";
+  const keepReferenceOrder = !query && activeCategory === "all" && activeModel === "all" && activeSort === "recommended";
   const items = useDemoContent
     ? keepReferenceOrder ? demoItems : sortGalleryItems(demoItems, activeSort)
     : (feed?.items ?? []).map(toGalleryCard);

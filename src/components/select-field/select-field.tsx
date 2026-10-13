@@ -21,7 +21,7 @@ export function SelectField({ label, name, options, defaultValue }: SelectFieldP
     if (!value) return;
 
     const params = new URLSearchParams(searchParams.toString());
-    if (value === "all" || value === "latest") {
+    if (value === "all" || (name === "sort" && value === "recommended" && !params.get("q"))) {
       params.delete(name);
     } else {
       params.set(name, value);

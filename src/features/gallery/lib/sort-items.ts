@@ -19,6 +19,7 @@ function sortValue(item: SortableGalleryItem, sort: string): number {
 
 /** Returns a stable, descending copy; unknown sort keys fall back to latest. */
 export function sortGalleryItems<T extends SortableGalleryItem>(items: readonly T[], sort: string): T[] {
+  if (sort === "recommended") return [...items];
   return items.toSorted((first, second) => {
     const firstValue = sortValue(first, sort);
     const secondValue = sortValue(second, sort);

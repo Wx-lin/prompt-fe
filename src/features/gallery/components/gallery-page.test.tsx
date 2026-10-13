@@ -1,11 +1,11 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { Ref } from "react";
+import type { ComponentProps, Ref } from "react";
 import type { GalleryCard } from "@/types/prompt";
 import { GalleryPage } from "./gallery-page";
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("./site-header", () => ({ SiteHeader: () => null }));
-vi.mock("@/i18n/navigation", () => ({ Link: () => null }));
+vi.mock("@/i18n/navigation", () => ({ Link: (props: ComponentProps<"a">) => <a {...props} /> }));
 vi.mock("./gallery-grid", () => ({ GalleryGrid: ({ items, sentinelRef, loadingMore, endOfList }: { items: GalleryCard[]; sentinelRef: Ref<HTMLDivElement>; loadingMore: boolean; endOfList: boolean }) => <div><div ref={sentinelRef} />{items.map(item => <span key={item.id}>{item.id}</span>)}{loadingMore && <span>pending</span>}{endOfList && <span>end</span>}</div> }));
 let notify: () => void;
 const props = { items: [{ id: "first" } as GalleryCard], categories: [], activeCategory: "all", activeSort: "latest", activeModel: "all", models: [], hasMore: true };
@@ -37,4 +37,18 @@ it("starts only one request for repeated intersection notifications", async () =
  const fetchMock = vi.fn(() => new Promise<Response>(() => {})); vi.stubGlobal("fetch", fetchMock);
  render(<GalleryPage {...props} />); await act(async () => { notify(); notify(); });
  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it.each(["recommended", "latest", "popular", "hot"])("preserves %s ordering and every filter during search pagination and clearing search", async sort => {
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ items: [], has_more: false }));
+  vi.stubGlobal("fetch", fetcher);
+  render(<GalleryPage {...props} query="cat" activeSort={sort} activeCategory="portrait" activeModel="FLUX" />);
+  await act(async () => notify());
+  const url = new URL(fetcher.mock.calls[0][0], "http://test");
+  expect(Object.fromEntries(url.searchParams)).toEqual({ category: "portrait", models: "FLUX", sort, page: "2", q: "cat" });
+  const cleared = new URL(screen.getByRole("link", { name: "clearSearchAriaLabel" }).getAttribute("href")!, "http://test");
+  expect(cleared.searchParams.get("sort")).toBe(sort === "recommended" ? null : sort);
+  expect(cleared.searchParams.get("category")).toBe("portrait");
+  expect(cleared.searchParams.get("models")).toBe("FLUX");
+  expect(cleared.searchParams.has("q")).toBe(false);
 });

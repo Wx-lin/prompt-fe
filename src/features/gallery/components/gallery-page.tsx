@@ -64,7 +64,7 @@ export function GalleryPage({
 
   const filters = new URLSearchParams();
   if (activeCategory !== "all") filters.set("category", activeCategory);
-  if (activeSort !== "latest") filters.set("sort", activeSort);
+  if (activeSort !== "recommended") filters.set("sort", activeSort);
   if (activeModel !== "all") filters.set("models", activeModel);
   const clearSearchHref = filters.size ? `/?${filters}` : "/";
 
@@ -78,7 +78,10 @@ export function GalleryPage({
     try {
       const params = new URLSearchParams(filters);
       params.set("page", String(page));
-      if (query) params.set("q", query);
+      if (query) {
+        params.set("q", query);
+        params.set("sort", activeSort);
+      }
       const response = await fetch(`/api/prompts?${params.toString()}`, { signal: controller.signal });
       if (!response.ok) throw new Error("Failed to load more prompts");
       const feed = (await response.json()) as PromptListResponse;

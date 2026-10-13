@@ -55,3 +55,9 @@ describe("sortGalleryItems", () => {
     expect(sortGalleryItems([], "latest")).toEqual([]);
   });
 });
+it("preserves curated recommended order and returns a new array", () => {
+  const items = [{ id: "curated", like_count: 1 }, { id: "popular", like_count: 10 }];
+  const result = sortGalleryItems(items, "recommended");
+  expect(result).toEqual(items);
+  expect(result).not.toBe(items);
+});
