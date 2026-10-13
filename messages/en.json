@@ -185,6 +185,12 @@
     "submitted": "Submitted successfully and awaiting review.",
     "catalogError": "Categories or models are unavailable. Refresh to retry.",
     "version": "Additional model version (optional)",
-    "versionHint": "For example, V6.1. New versions join the model catalog after your artwork is approved."
+    "versionHint": "For example, V6.1. New versions join the model catalog after your artwork is approved.",
+    "uploadAction": "Choose images or drag them here",
+    "uploadPasteHint": "Select multiple · Press Ctrl / ⌘ + V to paste images",
+    "cover": "Cover",
+    "uploadSuccess": "Uploaded",
+    "uploadFailed": "Upload failed. Try again.",
+    "uploading": "Uploading…"
   }
 }

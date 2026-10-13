@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { SelectOptions } from "@/components/select-field/select-options";
 import { Select } from "@base-ui/react/select";
 import { useRouter } from "@/i18n/navigation";
-import { validImage } from "@/lib/submissions/validation";
+import { ImageUpload } from "./image-upload";
 import type { Category } from "@/types/prompt";
 import type { SubmissionUpload } from "@/types/submission";
 import styles from "./submissions.module.css";
@@ -71,42 +71,10 @@ export function PublishForm({ categories, models }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const inFlight = useRef(false);
-  async function upload(files: File[]) {
-    if (inFlight.current)
-      return;
-    if (files.length + uploads.length > 6 || files.some(file => !validImage(file))) {
-      setError(t("imageError"));
-      return;
-    }
-    inFlight.current = true;
-    setBusy(true);
-    setError("");
-    try {
-      for (const file of files) {
-        const form = new FormData();
-        form.append("file", file);
-        const response = await fetch("/api/submissions/upload", { method: "POST", body: form });
-        if (response.status === 401) {
-          router.push("/login?returnTo=/publish");
-          return;
-        }
-        if (!response.ok)
-          throw new Error("upload");
-        const result = await response.json() as SubmissionUpload;
-        setUploads(current => [...current, result]);
-      }
-    }
-    catch {
-      setError(t("uploadError"));
-    }
-    finally {
-      inFlight.current = false;
-      setBusy(false);
-    }
-  }
+  const [uploadBlocked, setUploadBlocked] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (inFlight.current)
+    if (inFlight.current || uploadBlocked)
       return;
     if (!uploads.length || !category || !model || fullModel.length > 50) {
       setError(t("required"));
@@ -151,36 +119,7 @@ export function PublishForm({ categories, models }: {
       {t("reviewHint")}
     </p>
     <fieldset disabled={busy} className={styles.fields}>
-      <label htmlFor="artwork-upload">
-        {t("images")}
-      </label>
-      <p id="upload-hint" className={styles.muted}>
-        {t("imageHint")}
-      </p>
-      <input
-        id="artwork-upload"
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        multiple
-        aria-describedby="upload-hint"
-        onChange={event => {
-          const files = Array.from(event.target.files ?? []);
-          event.target.value = "";
-          void upload(files);
-        }}
-      />
-      <div className={styles.previews}>
-        {uploads.map((item, index) => <div key={item.id}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- private signed upload previews */}
-          <img src={item.image_url} alt={t("preview", { index: index + 1 })} />
-          <button
-            type="button"
-            onClick={() => setUploads(current => current.filter(upload => upload.id !== item.id))}
-          >
-            {t("remove")}
-          </button>
-        </div>)}
-      </div>
+      <ImageUpload disabled={busy} onUnauthorized={() => router.push("/login?returnTo=/publish")} onChange={(next, blocked) => { setUploads(next); setUploadBlocked(blocked); }} />
       <label htmlFor="work-title">
         {t("title")}
       </label>
@@ -242,7 +181,7 @@ export function PublishForm({ categories, models }: {
     </p>}
     <button
       className={styles.primary}
-      disabled={busy || !models.length || !categories.length}
+      disabled={busy || uploadBlocked || !models.length || !categories.length}
       type="submit"
     >
       {busy ? t("processing") : t("submit")}

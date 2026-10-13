@@ -185,6 +185,12 @@
     "submitted": "提交成功，作品正在等待审核。",
     "catalogError": "分类或模型暂时无法加载，请刷新后重试。",
     "version": "补充模型版本（选填）",
-    "versionHint": "例如 V6.1。新版本会在作品审核通过后加入模型目录。"
+    "versionHint": "例如 V6.1。新版本会在作品审核通过后加入模型目录。",
+    "uploadAction": "点击选择或拖拽图片到这里",
+    "uploadPasteHint": "支持多选 · Ctrl / ⌘ + V 粘贴图片",
+    "cover": "封面",
+    "uploadSuccess": "上传成功",
+    "uploadFailed": "上传失败，请重试",
+    "uploading": "上传中…"
   }
 }

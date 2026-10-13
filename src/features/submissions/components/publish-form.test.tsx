@@ -136,3 +136,19 @@ it("accepts a new version only for a generic family and submits the full name", 
   await user.click(screen.getByRole("button", { name: "提交审核" }));
   expect(JSON.parse(fetcher.mock.calls[1][1].body).models).toEqual(["Midjourney V6.1"]);
 });
+
+it("keeps text fields editable but blocks submission during pending and failed uploads", async () => {
+  const user = userEvent.setup();
+  let reject!: (reason: Error) => void;
+  vi.stubGlobal("fetch", vi.fn(() => new Promise((_resolve, fail) => { reject = fail; })));
+  render(<NextIntlClientProvider locale="zh" messages={messages}><PublishForm categories={[{ key: "illustration", label: "插画", count: 0 }]} models={[{ key: "Midjourney V7", label: "Midjourney V7" }]} /></NextIntlClientProvider>);
+  await user.upload(screen.getByLabelText("作品图片"), new File(["png"], "cat.png", { type: "image/png" }));
+  expect(screen.getByRole("button", { name: "提交审核" })).toBeDisabled();
+  await user.type(screen.getByLabelText("作品标题"), "正在编辑");
+  expect(screen.getByLabelText("作品标题")).toHaveValue("正在编辑");
+  reject(new Error("network"));
+  await screen.findByText("上传失败，请重试");
+  expect(screen.getByRole("button", { name: "提交审核" })).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: /移除.*cat.png/ }));
+  expect(screen.getByRole("button", { name: "提交审核" })).not.toBeDisabled();
+});
