@@ -1,0 +1,67 @@
+name: Test and deploy frontend
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Production build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://aigc-prompt.com
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+        run: npm run build
+      - name: Build and deploy committed release
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          : "${DEPLOY_HOST:?}" "${DEPLOY_USER:?}" "${DEPLOY_SSH_KEY:?}" "${DEPLOY_KNOWN_HOSTS:?}" "${NEXT_PUBLIC_GOOGLE_CLIENT_ID:?}"
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.-]+$ && "$DEPLOY_USER" =~ ^[a-zA-Z0-9_-]+$ ]]
+          umask 077
+          mkdir -p "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          ssh_opts=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15)
+          target="$DEPLOY_USER@$DEPLOY_HOST"
+          expected=$(ssh "${ssh_opts[@]}" "$target" 'cd /opt/aigc-prompt && sudo -n docker inspect --format "{{.Image}}" "$(sudo -n docker compose ps -q frontend)"')
+          release="frontend-$(date -u +%Y%m%d%H%M%S)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker build --platform linux/amd64 --build-arg NEXT_PUBLIC_SITE_URL=https://aigc-prompt.com --build-arg NEXT_PUBLIC_GOOGLE_CLIENT_ID --label "org.opencontainers.image.revision=$GITHUB_SHA" -t "aigc-frontend:$release" .
+          mkdir release
+          docker save "aigc-frontend:$release" | gzip > release/image.tar.gz
+          git archive "$GITHUB_SHA" | gzip > release/source.tar.gz
+          cp deploy/update-frontend.sh release/update-frontend.sh
+          (cd release && sha256sum image.tar.gz source.tar.gz update-frontend.sh > checksums.txt)
+          ssh "${ssh_opts[@]}" "$target" "umask 077; mkdir -p /opt/aigc-prompt/releases/$release"
+          scp "${ssh_opts[@]}" release/* "$target:/opt/aigc-prompt/releases/$release/"
+          ssh "${ssh_opts[@]}" "$target" "bash /opt/aigc-prompt/releases/$release/update-frontend.sh $release $expected"
+      - name: Remove SSH credentials
+        if: always()
+        run: rm -f "$HOME/.ssh/deploy_key"
