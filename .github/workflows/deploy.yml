@@ -59,8 +59,12 @@ jobs:
           git archive "$GITHUB_SHA" | gzip > release/source.tar.gz
           cp deploy/update-frontend.sh release/update-frontend.sh
           (cd release && sha256sum image.tar.gz source.tar.gz update-frontend.sh > checksums.txt)
+          # Validated release names and hashes intentionally expand before SSH.
+          # shellcheck disable=SC2029
           ssh "${ssh_opts[@]}" "$target" "umask 077; mkdir -p /opt/aigc-prompt/releases/$release"
           scp "${ssh_opts[@]}" release/* "$target:/opt/aigc-prompt/releases/$release/"
+          # Validated release names and hashes intentionally expand before SSH.
+          # shellcheck disable=SC2029
           ssh "${ssh_opts[@]}" "$target" "bash /opt/aigc-prompt/releases/$release/update-frontend.sh $release $expected"
       - name: Remove SSH credentials
         if: always()
