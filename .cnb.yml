@@ -1,0 +1,65 @@
+# Push/PR run checks only. Image publishing requires the explicit main button.
+$:
+  push: &checks
+    - runner:
+        cpus: 4
+        tags: cnb:arch:amd64
+      docker:
+        image: node:24-bookworm-slim
+      env:
+        NEXT_TELEMETRY_DISABLED: "1"
+      stages:
+        - name: Install locked dependencies
+          script: npm ci
+        - name: Lint
+          script: npm run lint
+        - name: Typecheck
+          script: npm run typecheck
+        - name: Unit and component tests
+          script: npm run test
+  pull_request: *checks
+
+main:
+  push: *checks
+  pull_request: *checks
+  web_trigger_build_image:
+    - runner:
+        cpus: 4
+        tags: cnb:arch:amd64
+      docker:
+        image: node:24-bookworm-slim
+      services:
+        - docker
+      env:
+        NEXT_TELEMETRY_DISABLED: "1"
+      stages:
+        - name: Validate public build configuration
+          script: |
+            set -eu
+            : "${NEXT_PUBLIC_GOOGLE_CLIENT_ID:?Provide the public Google Web OAuth client ID in the build dialog}"
+            : "${CNB_COMMIT:?CNB commit is required}"
+            : "${CNB_BUILD_ID:?CNB build ID is required}"
+        - name: Install locked dependencies
+          script: npm ci
+        - name: Lint
+          script: npm run lint
+        - name: Typecheck
+          script: npm run typecheck
+        - name: Unit and component tests
+          script: npm run test
+        - name: Set versioned image reference
+          script: echo -n "${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:sha-${CNB_COMMIT}-${CNB_BUILD_ID}"
+          exports:
+            info: IMAGE_TAG
+        - name: Build production image
+          script: |
+            set -eu
+            docker build --platform linux/amd64 \
+              --build-arg NEXT_PUBLIC_SITE_URL=https://aigc-prompt.com \
+              --build-arg NEXT_PUBLIC_GOOGLE_CLIENT_ID \
+              --label "org.opencontainers.image.revision=${CNB_COMMIT}" \
+              -t "$IMAGE_TAG" .
+        - name: Publish image to CNB registry
+          script: docker push "$IMAGE_TAG"
+        - name: Show image digest for later manual deployment
+          script: docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_TAG"

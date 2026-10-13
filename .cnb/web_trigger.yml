@@ -1,0 +1,15 @@
+branch:
+  - reg: ^main$
+    buttons:
+      - name: 构建主站镜像
+        description: 执行检查并保存版本镜像，不更新生产服务器
+        event: web_trigger_build_image
+        permissions:
+          roles:
+            - master
+        inputs:
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID:
+            name: Google 公开客户端 ID
+            description: Google Web OAuth client ID；不要输入 client secret
+            type: input
+            required: true
