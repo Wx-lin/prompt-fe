@@ -2,10 +2,197 @@
 
 每完成一个可独立验收的功能，就追加一条记录：目标、实现范围、文件边界、自测命令和实际结果、视觉对照结果、未完成项。不要用计划代替已验证结果。
 
+## 2026-10-10 · Google 登录构建配置修复（未上线）
+
+- 根因：Docker 构建未注入 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`，线上 JS 未包含客户端 ID。本地 `.env.local` 有值不代表 Docker 自动读取。
+- 修复：Dockerfile 新增公开客户端 ID 的 ARG/ENV；新增 `deploy/compose.google.yml`，在 Compose 构建时强制要求显式传入该值。没有写入 client secret 或上传本地环境文件。
+- 验证：回归测试先失败后通过，2 项部署配置检查通过；其余 35 项测试通过，lint/typecheck 通过。使用上一发布源码快照在本地注入实际公开 ID 后 production build 成功，并确认登录 JS 包含该 ID。未执行修复后的 Docker 构建或线上真实账号登录。
+- 发布阻碍：Google 官方明确禁止非 localhost 裸 IP 作为 JavaScript origin；当前 IP 入口需要用户提供正式 HTTPS 域名并配置 Google 授权来源。SSH 连接失效且密钥认证失败，本次未修改线上服务。
+- 操作说明：`docs/google-login-deployment.md`。不能将“客户端配置已修复”表述为“线上 Google 登录已恢复”。
+
+## 2026-10-10 · 前端发布 frontend-20261010-1413
+
+- 上线入口：https://62.234.69.93:8443 。仅更新前端，包括超长图过滤；未更新后端、管理端、数据库或采集任务。
+- 发布源码：当前工作区独立快照，SHA256 `8773aab878f41d9b25d42297d8d0d989a4143906fb93426de23ba6c21501ba26`；排除环境变量文件、凭据和依赖目录。本地与服务器构建使用同一快照。
+- 验证：lint、typecheck、35 项单测、覆盖率阈值、本地/远端 production build 通过；固定 zh-CN 后桌面与手机语言切换 E2E 通过。
+- 已有问题：390 px 窄屏文档宽度为 493 px，新版和切换前旧线上版本均复现，相关 2 项 E2E 未通过；本次未修复。全套 E2E、Google/邮箱真实登录未重测。
+- 上线后：HTTPS 证书校验通过，首页、health、登录页、真实详情和图片、管理后台及 JS 均返回 200，匿名管理接口返回 401。桌面与手机浏览器页面渲染及已加载图片比例抽检通过，不代表遍历全部内容。
+- 新镜像：`sha256:5847cb4c4a85fc8f249f0214854474cbc21faa80197ef024515e3e724f09f126`；容器 restart=0。仅 reload 网关解析新前端容器；其他服务及定时器状态未变。
+- 服务器备份与发布记录：`/opt/aigc-prompt/releases/frontend-20261010-1413/`；回滚镜像 `aigc-prompt-frontend:rollback-20261010-1413`，完整操作在该目录 `RELEASE.md`。磁盘剩余约 2.7 GB，未清理其他资产。
+
+## 2026-10-10 · 画廊过滤超长图
+
+- 规则：图片高度严格超过宽度 3 倍时隐藏列表卡片；恰好 3:1 和普通竖图保留，不删除后端数据，不改详情页。
+- 实现：`image-visibility.ts` 统一阈值；`PromptCard` 加载后根据自然尺寸上报超长图片；`GalleryGrid` 按图片 URL 排除后重新分列，桌面和移动布局共用规则。所有卡片被过滤时仍保留分页触发点。
+- 测试：新增 6 个组件回归用例，覆盖已知尺寸、运行时识别、无尺寸、3:1 边界、重新分列、空列表分页和下一页追加；`npm test` 共 35 项通过。
+- 真实浏览器：检查本地真实数据首页及截图，当前 40 张卡片、39 张图片加载成功；已加载图片没有超过 3:1 的长图，卡片框无异常超高，分页触发点存在。没有声称已遍历全部分页或完成手机实机验证。
+- 限制：接口没有实际尺寸时需图片加载后才能判断；尺寸未知期间沿用正常占位比例。
+
 ## 2026-10-08 · 项目初始化与实施计划
 
-- 创建桌面独立前端目录 `aigc-prompt-frontend`，使用 Next.js App Router 与 TypeScript。
-- 已确认 Base UI + CSS Modules；全局明暗主题将用单一 token 文件管理。
-- 记录项目说明、接手指南和分阶段实施计划。页面功能尚未实现。
-- 验证：脚手架正在初始化；依赖安装、lint、测试和 build 尚未运行。
-- 下一步：完成轻量脚手架、主题基座和 UI 参考资产归档，然后实现首页画廊。
+- 在桌面创建独立前端目录 `aigc-prompt-frontend`，技术栈为 Next.js App Router、TypeScript、Base UI 与 CSS Modules。
+- 记录项目目标、API 边界、模块分层、TDD/验证方式和后续模型接手顺序；归档 UI 浅色/暗色参考图。
+- 建立全局主题变量文件，暗色调色只在 `src/app/theme.css` 维护语义 token。
+
+## 2026-10-08 · 首页画廊和主题
+
+- 目标：复刻最新首页图并在手机使用双列瀑布流。
+- 实现：Next 服务端读取分类、提示词与 query filters；开发环境默认用本地演示图稳定视觉，设置 `AIGC_DEMO_MODE=false` 查看 API 作品。用用户首页图裁出十张素材，桌面五列按截图列宽与图片自然比例排布；移动双列。加入可访问主题切换、Base UI 排序/模型筛选、查看/复制/收藏入口。
+- 文件：`src/app/page.tsx`、`src/app/theme.css`、`src/features/gallery/`、`src/components/brand/`、`src/components/theme-provider/`、`src/components/select-field/`、`public/demo/`。
+- 视觉检查：Playwright 桌面 1536×1024 与移动 390px 截图；桌面五列坐标、Logo/顶栏、卡片比例按最新版截图校准；移动页面无水平溢出。做了截图人工并排检查，尚未做逐像素差分。
+- 自测：`npm run test`、`npm run typecheck`、`npm run lint`、`npm run test:e2e`；覆盖率结果记录在最终验收条目。
+- 未完成：后端公开提示词为空；生产没有 demo 数据。语言按钮还未切换英文；登录状态首页未接真实用户资料。
+
+## 2026-10-08 · 搜索、详情 SEO 与登录骨架
+
+- 目标：让核心路径可以演示，并为公开详情保留独立可抓取 URL。
+- 实现：搜索弹层、热门词、最近搜索 localStorage、搜索结果页；详情 parallel/intercepting route 让站内打开保留画廊，独立 URL SSR 并生成 title/description/canonical/OG；加入 robots 与后端提示词 sitemap；详情复制、下载、分享和移动端底部复制 CTA；邮箱验证码通过 Next Route Handler 转发后端，token 写入 HttpOnly Cookie。
+- 文件：`src/app/@modal/`、`src/app/prompt/`、`src/app/search/`、`src/app/login/`、`src/app/api/auth/`、`src/features/search/`、`src/features/prompt-detail/`、`src/features/auth/`、`src/app/robots.ts`、`src/app/sitemap.ts`。
+- 自测：Playwright 覆盖直接详情 URL、画廊内详情/搜索/登录弹层、手机 CTA、主题切换及视口溢出。
+- 未完成：Google OAuth 客户端未配置；真实点赞/收藏 BFF、搜索联想/分页、登录后用户状态与完整双语需下一阶段接入。后端 OpenAPI 对匿名详情的 Bearer 标记与路由实现存在差异，前端按路由实现的公开行为处理。
+
+## 2026-10-08 · 当前验收结果
+
+- 单元测试：Vitest 4 个文件、10 个用例通过。
+- 覆盖率：纳入的纯逻辑工具 statements 97.91%、branches 90.9%、functions 100%、lines 100%。该统计不包含 React 页面/组件；页面关键行为另由浏览器 E2E 覆盖，后续可扩充组件级 coverage。
+- Playwright：桌面与移动两个项目共 10 项通过，包含首页图卡、390px 无横向溢出、暗色主题、直达详情、详情/搜索/登录弹层导航和移动 CTA。
+- 视觉核验：人工查看 1536×1024 首页、390px 手机首页、详情桌面/手机和暗黑首页截图；首页列宽、卡片比例、Logo、搜索框和导航与参考图逐项校准。尚未执行图像逐像素 diff，因此不把目测结果表述为数学意义上的 100%。
+- 静态检查：`npm run lint`、`npm run typecheck`、`npm run build` 和 `git diff --check` 通过；`npm audit --omit=dev` 显示 0 个漏洞。
+- 后端：本机 `localhost:8000` 可用；开发默认显示从最新 UI 图裁出的样例，设 `AIGC_DEMO_MODE=false` 可切换 API 真实内容，production 不展示样例。
+- 环境：本机 Google Chrome 可用于 Playwright；E2E 通过 `webapp-testing` skill 的 `with_server.py` 启动 Next dev server。
+
+## 2026-10-09 · 搜索从全屏弹层改为锚定下拉面板
+
+- 用户反馈：cmdk 全屏弹层视觉太重、⌘K 快捷键不生效，要求改成类似小红书的「输入框下方内嵌下拉」交互。
+- 实现：搜索输入从「点击跳转 /search 路由触发全屏 Dialog」整体改为「header 内常驻 `<input>` + Base UI `Popover`（`modal={false}`）锚定在输入框下方的非模态下拉」，下拉内部沿用 cmdk `Command` 做最近搜索/热门词的键盘可达列表（`shouldFilter={false}`，不做库内过滤）。新增 `SearchPopover`（下拉面板本体）与 `SearchTriggerGroup`（持有 input ref，供 ⌘K/Ctrl+K 直接 `focus()`，不再做路由跳转）。
+- 路由收尾：`/search` 不再承载任何 UI，整体 307 重定向到首页（带 query/filters），仅保留旧链接兼容；移除 `@modal/(.)search` 拦截路由、`SearchPage`/`search-page.module.css`、`search-keyboard-shortcut.tsx`。
+- 主题适配：下拉面板颜色全部走 `--color-*` 语义 token（`--color-surface`/`--color-border`/`--color-hover` 等），cmdk `[data-selected="true"]` 复用同一套 token 做键盘高亮，深浅主题切换无需额外处理；Popover 过渡用 `[data-starting-style]`/`[data-ending-style]` 做轻量淡入位移。
+- 根因修复（意外发现）：E2E 全量失败定位到 Next.js 16 的 `allowedDevOrigins` 跨域保护拦截了 `127.0.0.1` 的 HMR/dev client 资源请求，导致页面 DOM 渲染正常但 React 事件完全没有 hydrate（按钮点击、`toggleTheme` 等全部静默失效，与本次搜索改动无关）。在 `next.config.ts` 显式加入 `allowedDevOrigins: ["127.0.0.1", "localhost"]` 修复；`playwright.config.ts` 的 `baseURL` 支持 `PLAYWRIGHT_BASE_URL` 环境变量覆盖，方便本机端口被占用时切换。
+- 文件：`src/features/search/components/search-popover.tsx`、`search-popover.module.css`、`src/features/gallery/components/search-trigger-group.tsx`、`src/features/gallery/components/site-header.tsx`/`.module.css`、`src/app/search/page.tsx`、`next.config.ts`、`playwright.config.ts`、`e2e/search.spec.ts`、`e2e/home.spec.ts`。
+- 自测：`npm run typecheck`、`npm run lint`、`npm run build` 均通过；Vitest 6 文件 29 用例通过；Playwright 桌面/手机共 30 项全部通过，覆盖 ⌘K/Ctrl+K 聚焦并打开下拉、Enter 搜索保持非弹层态、Esc 收起下拉不离开页面、空结果、旧 `/search` 链接重定向、筛选保留与详情返回。
+- 未完成：移动端下拉面板宽度固定为 `calc(100vw - 24px)`，未做触屏单独验收；热门词仍是前端静态列表，未接后端热搜接口。
+
+## 2026-10-09 · 搜索框迁移至 cmdk（已废弃，见下一条）
+
+- 目标：将搜索弹层内的输入区替换为 cmdk `Command` 组件，保留 Base UI Dialog 做遮罩/Esc/外部关闭，适配深浅主题。
+- 实现：安装 `cmdk@1.1.1`；`search-page.tsx` 用 `Command` + `Command.Input` 替换裸 `<form><input>`，最近搜索与热门词改为 `Command.Item`（`role="option"`），通过 `onSelect` 触发导航；传 `shouldFilter={false}` 禁用库内过滤，弹层只负责收集 query；Enter 在 `onKeyDown` 里拦截处理，Esc 直接冒泡到 Base UI Dialog 关闭。
+- 主题适配：所有颜色继续引用 `--color-*` 语义 token；`[data-selected="true"]` 属性选择器复用 `--color-hover` 高亮当前键盘焦点项，深浅主题无需额外处理。
+- 文件：`src/features/search/components/search-page.tsx`、`src/features/search/components/search-page.module.css`、`e2e/search.spec.ts`（选择器从 `role=textbox` 更新为 `role=combobox`，最近/热门词从 `role=link` 更新为 `role=option`）、`package.json`。
+- 自测：`npm run typecheck` 通过；Vitest 6 文件 29 用例通过；`npm run lint` 通过；Playwright 桌面/手机共 28 项全部通过，覆盖 Enter 搜索、Esc 关闭、空白提交留弹层、最近搜索/热门词点击、筛选保留和详情返回。
+- 说明：全屏弹层视觉效果不理想，已在下一条记录中改为锚定下拉面板，相关文件已删除，此条仅保留历史脉络。
+
+## 2026-10-09 · 修复选择框与搜索交互
+
+- 用户反馈：排序/模型下拉交互不正确；搜索提交应关闭输入弹层，在首页画廊展示结果。
+- 根因：Select 已经使用 Base UI，但默认 `alignItemWithTrigger=true` 让选中项覆盖按钮，且可访问名称放在不产生 DOM 的 Root；搜索错误地导航到被拦截的 `/search?q=` 并在弹层里渲染结果。
+- 修复：Base UI Select 显式向下、右对齐、保留边界避让与库内键盘行为，加入选中标识和可伸缩菜单。搜索输入改用 Base UI Dialog 管理焦点、Esc 和外部关闭；回车、最近搜索、热门词全部导航到首页 `/?q=`，保留筛选、关键词、空结果与清除入口。补 `@modal/page.tsx` 清空软导航后的弹层；旧 `/search?q=` 兼容重定向。
+- 结果正确性：演示列表应用不可变排序；真实搜索接口暂不支持分类/模型/排序，服务端适配在需要这些条件时按每页 50 项读取完整匹配集后过滤、排序、分页，避免只检查第一页导致误报无结果。普通 latest 搜索仍为单次请求。API 故障显示加载失败，不当成空结果。
+- 文件：`src/components/select-field/`、`src/features/search/components/`、`src/features/gallery/components/`、`src/features/gallery/lib/sort-items.ts`、`src/app/page.tsx`、`src/app/search/page.tsx`、`src/app/@modal/`、`src/lib/api/client.ts`、相关单元与 E2E 测试。README、AGENT 和实施计划已同步。
+- TDD 证据：先补浏览器测试，实际复现菜单覆盖、缺少名称，以及搜索提交停留在 `/search?q=`；API 边界测试复现跨页匹配/排序失败，再实现修复。
+- 自测：Vitest 6 文件、29 用例通过；纳入的纯逻辑与 API 客户端 statements 98.87%、branches 94.66%、functions/lines 100%，不包含 React 页面组件。Playwright 桌面/手机共 28 项通过，覆盖选择/重置、Enter/方向键/Escape/外部关闭、回车搜索、空结果、清除、刷新、旧链接、最近/热门词、筛选保留和详情返回。Lint、typecheck、production build、git diff --check 均通过。
+- 视觉检查：人工查看桌面菜单、手机菜单、搜索输入与首页搜索结果截图；额外等待图片完成加载，确认搜索结果图片均有有效自然尺寸。
+- 后续边界：组合搜索筛选暂由前端服务端聚合，多页数据越多响应越慢，后端原生支持这些参数后应替换适配；本轮不增加结果分页 UI。
+
+## 2026-10-09 · 修复搜索输入框焦点白框、登录弹层对齐参考图
+
+- 用户反馈：搜索输入框聚焦有多余白色描边；登录弹层样式和 UI 参考图（`docs/reference/ui/light/login-modal.png`）不一致。
+- 根因 1：`globals.css` 全局 `input:focus-visible { outline: 2px solid currentColor }` 盖过了搜索输入框自身的 `outline: 0`（两者特指度相同，取决于声明顺序）。
+- 修复 1：`search-popover.module.css` 补充 `.input:focus-visible { outline: 0 }` 覆盖规则。
+- 根因 2：登录弹层把品牌 Logo 和关闭按钮放在卡片外部固定定位的 header 里，参考图是放在卡片内部顶部，且 Logo 是小号；Google 按钮文案和底部条款样式也有差异。
+- 修复 2：`login-page.tsx` 把 header 移入 `.dialog` 内部；`BrandLogo` 新增可选 `size="compact"` prop（默认沿用原尺寸，不影响 `site-header`/`detail-page` 现有调用），登录页头部用紧凑 Logo；Google 按钮文案改为「使用 Google 登录」；补充「无需密码，验证码将发送至你的邮箱」提示；条款文字加下划线链接样式。
+- 文件：`src/features/search/components/search-popover.module.css`、`src/features/auth/components/login-page.tsx`/`.module.css`、`src/components/brand/brand-logo.tsx`/`.module.css`。
+- 自测：`npm run typecheck`、`npm run lint` 通过；Vitest 6 文件 29 用例通过；Playwright 桌面/手机共 30 项全部通过（含登录/首页/搜索/select-field 全量，无回归）。
+- 视觉检查：浏览器实测首页点击登录弹出态，桌面浅色/暗色两种主题下与参考图逐项核对 Logo 位置与尺寸、Google 按钮文案、邮箱表单、提示文案、条款链接样式；均一致。
+- 已知边界：直接访问独立 `/login`、`/prompt/[id]` URL（非站内拦截路由）时背后是纯色遮罩，没有画廊内容可模糊——这是这些独立 SSR 路由本身没有画廊数据的既有限制，非本次改动引入，本轮未处理。
+
+## 2026-10-09 · 修复 Google 图标误用文字、补齐独立路由背景
+
+- 用户反馈：登录卡片里 Google 图标是纯蓝色字母 "G"，不是官方图标；刷新 `/login` 页面背景变白（丢了画廊模糊背景）。
+- 修复 1：`login-page.tsx` 把 `<span>G</span>` 换成内联四色官方 Google SVG 图标（标准 48×48 viewBox 四色路径）。
+- 修复 2：新增 `GalleryBackdrop`（`src/features/gallery/components/gallery-backdrop.tsx`），服务端渲染只读画廊网格作为独立路由的背景；用 `inert` + `pointer-events: none` 保证背景不可交互、不占无障碍树。接入 `src/app/login/page.tsx`，直接访问或刷新 `/login` 现在也有模糊画廊背景，不再是纯色。
+- 文件：`src/features/auth/components/login-page.tsx`/`.module.css`、`src/features/gallery/components/gallery-backdrop.tsx`（新增）/`.module.css`（新增）、`src/app/login/page.tsx`。
+- 自测：`npm run typecheck`、`npm run lint` 通过；Vitest 6 文件 29 用例通过；Playwright 桌面/手机共 30 项全部通过。
+- 视觉检查：浏览器直接访问 `http://localhost:3001/login`（非站内跳转），暗色模式下核对 Google 四色图标与背景画廊模糊效果，均符合预期。
+- 后续边界：`/prompt/[id]` 独立 URL 直接访问时仍是纯色背景（同一类问题，未在本轮一并处理，因未被要求）；若需要可复用同一个 `GalleryBackdrop` 组件接入。
+
+## 2026-10-09 · 接入 next-intl 实现中英双语国际化
+
+- 用户诉求：发现语言切换按钮是摆设，要求做成真实可用的中英双语站点，选择方案 B（`next-intl` + `/zh`/`/en` 路由前缀，SEO 友好）。
+- 路由改造：`src/app/{page.tsx,login/,search/,prompt/,@modal/}` 整体迁移到 `src/app/[locale]/` 下；根 `src/app/layout.tsx` 收窄为只负责 `<html lang>` 与主题引导脚本的壳层；新建 `src/app/[locale]/layout.tsx` 承担 `generateStaticParams`、按 locale 翻译的 `generateMetadata`、`NextIntlClientProvider` 包裹和 `@modal` 并行路由出口。`middleware.ts` 按 Next.js 16 新规范改名为根目录 `proxy.ts`，用 `next-intl/middleware` 的 `createMiddleware(routing)`。
+- 新增 `src/i18n/{routing,navigation,request}.ts`：`routing.ts` 定义 `locales = ["zh","en"]`、`defaultLocale = "zh"`、`localePrefix: "always"`；`navigation.ts` 用 `createNavigation` 导出替代 `next/link`/`next/navigation` 的 `Link`/`redirect`/`usePathname`/`useRouter`，自动带 locale 前缀；`request.ts` 按 `requestLocale` 加载 `messages/{locale}.json`。
+- 文案抽取：`messages/zh.json`/`en.json` 覆盖 `metadata`/`brand`/`theme`/`header`/`categories`/`search`/`gallery`/`card`/`detail`/`login` 共 10 个命名空间；全部组件迁移到 `useTranslations()`：`site-header`、`gallery-grid`、`gallery-page`、`prompt-card`、`search-popover`、`login-page`、`detail-page`、`brand-logo`、`theme-toggle`；多个原本的服务端组件为了用 hook 转为 `"use client"`。新增 `language-toggle.tsx`（纯客户端，`useLocale`/`Link locale=`切换，保留当前路径和 query）。
+- 路由页面同步：`[locale]/login`、`[locale]/prompt/[id]`、`[locale]/search` 均补上 `generateMetadata` 的 locale 感知翻译与 `setRequestLocale`；`robots.ts`/`sitemap.ts` 升级为多语言感知（disallow 规则兼容 `/*/login`，sitemap 为每个 locale 生成独立 URL 并带 `alternates.languages`）。
+- 测试同步：`theme-toggle.test.tsx` 补 `NextIntlClientProvider` 包裹（否则 `useTranslations` 直接抛错）；`e2e/home.spec.ts`、`e2e/search.spec.ts`、`e2e/select-field.spec.ts` 全部 `page.goto` 加 `/zh` 前缀，新增一条语言切换到 `/en` 并验证英文文案的 E2E 用例。
+- 自测：`npm run typecheck`、`npm run lint`、`npm run build`（产物含 `/[locale]`、`/[locale]/login`、`/[locale]/prompt/[id]` 等）均通过；Vitest 6 文件 29 用例通过。
+- 视觉检查：浏览器实测 `http://localhost:3001/zh`、`/en`，分类导航、排序/模型筛选、详情页、登录页中英文案均正确切换；语言切换按钮保留当前路径和筛选 query。
+- 已知边界：`fallbackCategories`（后端分类接口不可用时的兜底）仍是写死中文标签，未做多语言兜底；搜索的热门词列表仍是前端静态文案（随 locale 切换），未接后端热搜接口。
+
+## 2026-10-09 · 切换到真实后端数据、修复画廊点击失效、瀑布流改为按图片真实比例布局
+
+- 用户反馈 1：确认当前首页用的是 Demo 假数据非真实接口；要求切换到真实后端。
+  - 根因：`[locale]/page.tsx` 里 `useDemoContent = NODE_ENV !== "production" && AIGC_DEMO_MODE !== "false"`，开发环境默认跳过真实请求直接渲染 `demoPrompts` 写死数据。
+  - 修复：新增 `.env.local`（`API_BASE_URL=http://localhost:8000`、`AIGC_DEMO_MODE=false`），重启 dev server 后首页渲染后端 `/api/prompts` 真实返回数据。
+- 用户反馈 2：首页点击画廊图片没有打开详情弹窗。
+  - 根因：`prompt-card.module.css` 的 `.hoverTools` 悬浮层整体 `inset:0` + `pointer-events:auto`，鼠标悬停时该透明层整体拦截点击，导致底层 `<Link>` 点不到（只有层上的按钮能点）；移动端媒体查询里原本已有「只让按钮可点、容器不拦截」的正确写法，桌面端缺失。
+  - 修复：桌面端改为只让 `.bookmark`、`.cardActions` 内的按钮/链接 `pointer-events: auto`，`.hoverTools` 容器本身不再拦截点击；移动端同步精简为一致写法。浏览器实测点击卡片图片，URL 正确变为 `/zh/prompt/{id}`，拦截路由弹窗正常打开。
+- 用户反馈 3：详情弹窗图片被拉伸变形不好看，要求参考小红书。
+  - 调研结论（浏览器实测小红书网页版 DOM）：瀑布流卡片容器高度不固定，由图片真实宽高比动态算出（`height = width / naturalAspectRatio`），容器形状已贴合图片形状，`object-fit: cover` 几乎不裁切；详情弹窗图片舞台是「宽度固定、高度 `auto` 跟随图片比例撑出来」（`.media-container { width: 979.5px; height: auto }`），而非先画一个固定矩形盒子再 `contain`/`cover` 塞图。
+  - 实现 1（瀑布流卡片）：`prompt-card.tsx` 的 `.artworkFrame` 改为 `style={{ aspectRatio }}`，`aspectRatio` 初始取 `imageWidth/imageHeight`（demo 数据有、真实接口暂无则退回 3:4），图片 `onLoad` 读取 `naturalWidth/naturalHeight` 二次校正为精确比例；`<Image>` 从 `width/height` 改为 `fill` + 绝对定位容器。
+  - 实现 2（详情弹窗）：`detail-page.module.css` 的 `.dialog` 从固定网格列改为 `flex` 布局，`.artworkPane` 用 `aspect-ratio: var(--art-ratio, 3/4)` 由组件通过内联 CSS 变量动态设置，`.details` 固定宽度 400px 不受图片比例影响；`detail-page.tsx` 同样用 `onLoad` 读取真实宽高比写入 `--art-ratio`，切换图片（上一张/下一张）时先清空再重新测量，避免显示上一张图的残留比例。
+  - 效果：浅/深色模式下分别截图核验——方形图正确渲染为方形舞台、近方形的"竖版"海报也正确按真实比例渲染，均无裁切变形，黑边最小化（仅在该图片比例与舞台空间约束冲突时才会出现）。
+- 文件：`.env.local`（新增，不入库）、`src/features/gallery/components/prompt-card.tsx`/`.module.css`、`src/features/prompt-detail/components/detail-page.tsx`/`.module.css`。
+- 自测：`npm run typecheck`、`npm run lint`、`npm run test`（Vitest 6 文件 29 用例）均通过。
+- 视觉检查：浏览器截图核验首页瀑布流错落效果、详情弹窗方形图/近方形图两种真实比例场景、深浅主题下的舞台背景色过渡。
+- 已知边界：后端目前暂未返回图片原始宽高字段，前端只能靠 `<img onLoad>` 事后校正（首帧用默认 3:4 占位，图片加载完成后出现一次轻微高度跳动）；如后端未来在 `/api/prompts` 响应里补充 `width`/`height`，可去掉这个首帧占位误差，直接用真实数据算初始比例。
+
+## 2026-10-09 · 画廊接入服务端分页 + 瀑布流无限滚动加载
+
+- 用户反馈：首页瀑布流一次性只请求了第一页（20 条），没有「滚动到底加载下一页」的交互；确认后端 `/api/prompts` 本身已支持 `page`/`page_size`/`has_more` 分页。
+- 实现：
+  - 新增 `src/app/api/prompts/route.ts`：BFF 代理路由，转发 `getPromptFeed`/`searchPrompts`，供浏览器端增量请求下一页，不直接暴露后端 `API_BASE_URL`。
+  - `gallery-grid.tsx` 新增底部哨兵元素（`sentinelRef`/`loadingMore`/`endOfList` props），展示「加载更多中…」/「已经到底啦」状态；新增中英文案 `loadingMore`/`noMoreItems`。
+  - `gallery-page.tsx` 改为客户端维护分页状态（`loadedItems`/`page`/`canLoadMore`/`loadingMore`），用 `IntersectionObserver`（`rootMargin: "400px"`）监听哨兵元素，触底自动 `fetch(/api/prompts?...)` 追加下一页；筛选条件/搜索词变化时服务端首屏数据变化，用「渲染期间比较 props 变化重置 state」模式（而非在 `useEffect` 里同步 `setState`，避免 React 的 `set-state-in-effect` lint 告警）重置分页状态。
+  - `[locale]/page.tsx` 服务端首屏仍只请求第一页，额外把 `hasMore`/`nextPage` 传给客户端组件作为后续加载起点。
+- 自测：`npm run typecheck`、`npm run lint`、`npm run test`（Vitest 6 文件 29 用例）均通过。
+- 浏览器验证：真实后端当前 `total=35`，首屏渲染 20 条；滚动到页面底部后自动追加剩余 15 条，总数变为 35；加载完毕后正确显示「已经到底啦」，不再发起多余请求。
+- 已知边界：Demo 模式（`AIGC_DEMO_MODE != "false"`）下 `hasMore` 固定为 `false`，不触发滚动加载（demo 数据本身只有 10 条写死数据，设计上无需分页）；搜索结果分页复用同一套 `/api/prompts` 代理，筛选+搜索组合场景仍是后端原有的「拉取全量匹配再本地切片」适配逻辑，详见更早的「修复选择框与搜索交互」记录。
+
+## 2026-10-09 · 修复详情弹窗切图时的布局抖动
+
+- 用户反馈：详情弹窗切换上一张/下一张图片时整个弹窗会抖一下。
+- 根因：`showPrevImage`/`showNextImage` 在切换前先 `setAspectRatio(null)`，让 `.artworkPane` 的 `aspect-ratio` 瞬间退回 CSS 默认值 `3/4`，待新图 `onLoad` 完成后才跳到真实比例——造成「先塌缩到默认比例、再跳变到目标比例」两次布局跳动；又因为 `.dialog` 宽度是 `width: fit-content` 完全跟随 `.artworkPane` 反推，所以整个弹窗（含右侧信息栏位置）都跟着一起抖。
+- 修复：切换图片时不再清空 `aspectRatio`，保留旧图片比例直到新图片 `onLoad` 返回真实比例再更新，过程只有一次目标明确的尺寸变化；`.artworkPane` 新增 `transition: aspect-ratio 220ms ease`，让比例变化本身平滑过渡而非瞬间跳变，并按 `prefers-reduced-motion: reduce` 关闭该过渡。
+- 文件：`src/features/prompt-detail/components/detail-page.tsx`、`detail-page.module.css`。
+- 自测：`npm run typecheck`、`npm run lint`、`npm run test`（29/29）均通过。
+- 浏览器验证：实测点击"下一张"，舞台宽度从 951px 平滑过渡到 1020px（新图真实比例），过程中不再出现回退到 3:4 的中间抖动帧。
+
+## 2026-10-09 · i18n 路由改为 as-needed（默认语言不带前缀），修复 proxy.ts 文件位置导致中间件完全不执行的问题
+
+- 用户反馈：地址栏里一直带着 `/zh`/`/en`，希望默认语言保持简洁地址栏；同时解释了为什么不能直接改成 localStorage 存语言（会丢失 SEO 收录与 hreflang 能力），确认改用折中方案。
+- 改动 1（预期内）：`src/i18n/routing.ts` 的 `localePrefix` 从 `"always"` 改为 `"as-needed"`——默认语言（zh）服务于无前缀的 `/`，仅非默认语言（en）带 `/en` 前缀；同步更新 `sitemap.ts`/`robots.ts`/`[locale]/layout.tsx`/`[locale]/prompt/[id]/page.tsx` 里所有写死 `/${locale}` 的路径拼接逻辑，改为「默认 locale 省略前缀」的 `localizedPath()` 辅助函数；`e2e/{home,search,select-field}.spec.ts` 全部 `/zh` 前缀改回 `/`。
+- 意外发现并修复的根因 bug：改完后发现 `/` 访问直接 404，中间件完全没有执行（用临时调试代码验证 `x-debug-middleware-ran` 响应头缺失、`.next/dev/server/middleware-manifest.json` 里 `middleware` 字段是空对象）。根因是 `proxy.ts`（Next.js 16 重命名自 `middleware.ts`）被放在了项目根目录，但本项目使用 `src/` 目录约定（`src/app/`）——Next.js 要求这种项目结构下 `proxy.ts` 必须和 `src/app/` 同级放在 `src/` 目录内，根目录下的 `proxy.ts` 会被静默忽略，不报任何错误、不留痕迹，表现就是「地址重写/重定向全部不生效」。移动到 `src/proxy.ts` 后立即生效（响应头出现 `x-middleware-rewrite: /zh`、`Link: <...>; rel="alternate"; hreflang=...`）。这是此前「always」前缀模式之所以一直能正常工作的原因是：当时所有路径都显式带 `/zh`/`/en`，根本不依赖中间件做任何重写，所以这个潜在 bug 此前被掩盖了，直到改成 `as-needed` 依赖中间件重写根路径才暴露。
+- 文件：`src/i18n/routing.ts`、`src/app/sitemap.ts`、`src/app/robots.ts`、`src/app/[locale]/layout.tsx`、`src/app/[locale]/prompt/[id]/page.tsx`、`proxy.ts` → 移动为 `src/proxy.ts`（新增代码注释记录这个坑）、`e2e/home.spec.ts`、`e2e/search.spec.ts`、`e2e/select-field.spec.ts`。
+- 自测：`npm run typecheck`、`npm run lint`、`npm run test`（29/29）、`npm run build`（production 产物正确生成 `ƒ Proxy (Middleware)`）均通过。
+- 浏览器验证：`curl` 核对 `/` → 200（无前缀，内部 rewrite 到 `/zh`，响应头含 hreflang alternate links）、`/en` → 200、`/zh` → 307 重定向归一化到 `/`、`/login`/`/en/login` → 200；实测点击语言切换按钮，中文首页 `/` ↔ 英文 `/en` 往返跳转均正确，地址栏在默认语言下保持简洁、无 `/zh` 残留。
+
+## 2026-10-09 · 登录态头像/点赞收藏接入真实后端 + 新建收藏列表页 + 头部与分类导航重新设计
+
+- 用户诉求：验证后端已支持 `GET /api/auth/me`、`POST/DELETE /api/prompts/{id}/{like,collect}`、`GET /api/users/me/collects`（均为 `HTTPBearer` 鉴权），要求前端 100% 接入，UI 按参考设计稿还原，兼顾中英文案与深浅主题，不确定的地方先问。
+- 登录态与会话：新增 `src/lib/auth/session.ts`（服务端读取 `aigc_session` HttpOnly cookie、调用 `getCurrentUser` 换取用户信息）；`src/lib/api/client.ts` 的 `request()` 支持可选 `accessToken`（带 token 的请求强制 `cache: "no-store"`，避免个性化数据被当成公共数据缓存）；新增 BFF 代理路由 `src/app/api/auth/{me,logout}/route.ts`、`src/app/api/prompts/[id]/{like,collect}/route.ts`、`src/app/api/users/me/collects/route.ts`，浏览器端永远只打本域代理，不直连后端。
+- 详情页点赞/收藏：`detail-page.tsx` 新增 `liked/likeCount/collected` 状态（种子值来自 `PromptDetail.is_liked/is_collected`，`GalleryCard` 类型没有则默认 false），`toggleLike()`/`toggleCollect()` 调 BFF 路由，401 时 `router.push("/login")` 复用既有登录拦截弹层，成功后乐观更新本地状态；`[locale]/prompt/[id]/page.tsx` 与 `@modal/(.)prompt/[id]/page.tsx` 同步改为 `getSessionToken()` 后把 token 传给 `getPromptDetail(id, token)`，确保已登录用户首屏就能拿到真实点赞/收藏态（之前漏传，会导致已登录用户看到的还是未点赞未收藏的默认值）。
+- 画廊卡片收藏按钮：确认后端 `/api/prompts`（列表接口）不返回 `is_collected`（只有详情接口才有），和用户确认后实现为**仅本次会话内的临时视觉反馈**（`prompt-card.tsx` 的 `collected` state 刷新后重置，不代表真实持久化状态），同样会调用 BFF 路由但不依赖它来初始化状态。
+- 新建 `/collections` 我的收藏页：`src/app/[locale]/collections/page.tsx`（未登录 `redirect("/login")`）+ `src/features/collections/components/collections-page.tsx`（复用 `GalleryGrid`，`IntersectionObserver` 触底加载更多，同之前画廊页的分页模式）+ `/api/users/me/collects` BFF 分页代理。
+- 头部用户菜单重做：`UserMenu`（`src/features/auth/components/user-menu.tsx`）从「头像+常驻昵称+下拉」改为**只保留一个圆形头像触发器**，昵称/邮箱移入下拉面板顶部的身份区块，面板内容为「身份信息 → 分隔线 → 我的收藏 → 退出登录」，参考主流产品头像菜单的常见模式（触发器极简，身份与操作收进弹层）；`SiteHeader` 头部不再有常驻的「我的收藏」文字链接和分隔线。
+- 修复真实数据 bug：首页分类标签出现 `categories.image_edit` 这种未翻译原文——根因是 `messages/{zh,en}.json` 的 `categories` 翻译表还是旧版 7 分类残留（`head_avatar/logo/food/scene` 等），key 和后端当前真实的 8 分类体系（`portrait/avatar/poster/illustration/photography/character/image_edit/workflow`）完全不匹配；修复为与后端一致的 8 个 key 及对应中英文案。
+- 分类导航交互重新设计（迭代两版，均经用户截图反馈修正）：
+  - 第一版：8 个分类一次性全部等宽下划线 tab 平铺导致溢出截断，改为「全部 + 分类改成胶囊按钮横向可滚动 + 右侧渐隐遮罩」。
+  - 第二版（用户给参考截图要求更简洁）：新增 `CategoryNav` 组件（`src/features/gallery/components/category-nav.tsx`），只常驻展示「全部 + 4 个高频分类」，剩余分类收进「全部分类」下拉触发器（复用 Base UI `Popover`，和搜索框弹层同一套组件），下拉内容为无分组的两列网格（后端没有分类分组字段，不编造分组结构）。
+  - 第三版（用户再次给参考截图指出样式不对）：改为整条文字项统一放进一个灰色圆角容器（`.nav` 背景 `--color-surface-raised` + `border-radius: 23px`），选中态为黑色加粗 + 底部 2px 短下划线，去掉逐项描边胶囊的样式，和参考图的「推荐 人像 海报 插画 摄影 全部分类」视觉风格一致。
+  - 同步隐藏导航行场景：`/collections` 收藏页和搜索结果页（`gallery-page.tsx` 当 `query` 非空时）都不展示分类导航行，因为这两个场景下分类筛选没有意义；`CollectionsRoute` 顺手去掉了不再需要的 `getCategories()` 请求。
+- 清理：删掉详情页里一个从未绑定任何逻辑的无效「···」更多操作占位按钮，以及对应废弃的 `detail.more` i18n key（中英文）。
+- 文件：`src/lib/auth/session.ts`（新增）、`src/lib/api/client.ts`、`src/app/api/auth/{me,logout}/route.ts`（新增）、`src/app/api/prompts/[id]/{like,collect}/route.ts`（新增）、`src/app/api/users/me/collects/route.ts`（新增）、`src/features/prompt-detail/components/detail-page.tsx`/`.module.css`、`src/app/[locale]/prompt/[id]/page.tsx`、`src/app/[locale]/@modal/(.)prompt/[id]/page.tsx`、`src/features/gallery/components/prompt-card.tsx`/`.module.css`、`src/app/[locale]/collections/page.tsx`（新增）、`src/features/collections/components/collections-page.tsx`/`.module.css`（新增）、`src/features/auth/components/user-menu.tsx`/`.module.css`、`src/features/gallery/components/site-header.tsx`/`.module.css`、`src/features/gallery/components/category-nav.tsx`/`.module.css`（新增）、`src/features/gallery/components/gallery-page.tsx`、`messages/{zh,en}.json`。
+- 自测：`npm run typecheck`、`npm run lint`、`npm run test`（Vitest 6 文件 29 用例）、`npm run build`（production 产物正确生成 `/collections`、`/api/prompts/[id]/{like,collect}`、`/api/users/me/collects` 等路由）均通过。
+- 真实后端联调验证：用脚本直接生成测试用户 JWT（绕开本地邮件发送限流）核实——未登录调用 `like`/`collect` → `401`；已登录调用 → `204`，`is_liked`/`like_count`/收藏列表均正确更新；`/collections` 未登录 → `307` 到 `/login`，已登录 → `200` 正确渲染标题与空态；详情页 SSR 正确渲染点赞激活态 class，证明 token 转发生效；登出接口 `204` 并清除 cookie。浏览器截图核验：头部仅剩主题切换/中英切换/圆形头像三项，点击头像弹出菜单正确展示身份信息、我的收藏、退出登录；分类导航常驻 4 个高频分类 + 全部分类下拉，下拉网格展示剩余分类且可正常跳转筛选；最终样式与用户提供的参考截图风格一致。
+- 已知边界：画廊卡片收藏按钮是会话内临时视觉反馈，刷新后重置（后端列表接口暂不返回 `is_collected`，是用户认可的权衡方案，非 bug）；深浅主题下的像素级逐一比对未做，仅做了默认（浅色）主题下的 HTML/截图级验证。
+
+本地开发访问地址：开发服务器固定监听 **3000** 端口，若该端口被其他进程占用会自动顺延到 **3001**（本机常驻环境下 3000 端口长期被另一进程占用，因此实际稳定访问地址基本是 `http://localhost:3001`）。启动命令：`npm run dev`（在项目根目录 `/Users/wangxinlin/Desktop/aigc-prompt-frontend` 下执行）；启动后终端输出的 `- Local: http://localhost:XXXX` 行是本次实际端口，以终端输出为准。
