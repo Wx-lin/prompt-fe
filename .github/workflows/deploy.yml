@@ -53,19 +53,27 @@ jobs:
           target="$DEPLOY_USER@$DEPLOY_HOST"
           expected=$(ssh "${ssh_opts[@]}" "$target" 'cd /opt/aigc-prompt && sudo -n docker inspect --format "{{.Image}}" "$(sudo -n docker compose ps -q frontend)"')
           release="frontend-$(date -u +%Y%m%d%H%M%S)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          docker build --platform linux/amd64 --build-arg NEXT_PUBLIC_SITE_URL=https://aigc-prompt.com --build-arg NEXT_PUBLIC_GOOGLE_CLIENT_ID --label "org.opencontainers.image.revision=$GITHUB_SHA" -t "aigc-frontend:$release" .
           mkdir release
-          docker save "aigc-frontend:$release" | gzip > release/image.tar.gz
+          mkdir -p runtime/app/.next
+          cp -a .next/standalone/. runtime/app/
+          cp -a .next/static runtime/app/.next/static
+          cp -a public runtime/app/public
+          if find runtime -type l -print -quit | grep -q .; then
+            echo 'Runtime contains symlinks; release rejected'
+            exit 1
+          fi
+          test -f runtime/app/server.js
+          tar -czf release/runtime.tar.gz -C runtime .
           git archive "$GITHUB_SHA" | gzip > release/source.tar.gz
           cp deploy/update-frontend.sh release/update-frontend.sh
-          (cd release && sha256sum image.tar.gz source.tar.gz update-frontend.sh > checksums.txt)
+          (cd release && sha256sum runtime.tar.gz source.tar.gz update-frontend.sh > checksums.txt)
           # Validated release names and hashes intentionally expand before SSH.
           # shellcheck disable=SC2029
           ssh "${ssh_opts[@]}" "$target" "umask 077; mkdir -p /opt/aigc-prompt/releases/$release"
           scp "${ssh_opts[@]}" release/* "$target:/opt/aigc-prompt/releases/$release/"
           # Validated release names and hashes intentionally expand before SSH.
           # shellcheck disable=SC2029
-          ssh "${ssh_opts[@]}" "$target" "bash /opt/aigc-prompt/releases/$release/update-frontend.sh $release $expected"
+          ssh "${ssh_opts[@]}" "$target" "bash /opt/aigc-prompt/releases/$release/update-frontend.sh $release $expected $GITHUB_SHA"
       - name: Remove SSH credentials
         if: always()
         run: rm -f "$HOME/.ssh/deploy_key"

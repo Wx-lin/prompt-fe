@@ -2,6 +2,8 @@
 set -Eeuo pipefail
 release=${1:?release required}
 expected=${2:?expected image required}
+revision=${3:?commit revision required}
+[[ "$revision" =~ ^[a-f0-9]{40}$ ]]
 [[ "$release" =~ ^frontend-[0-9]+-[0-9]+-[0-9]+$ ]]
 [[ "$expected" =~ ^sha256:[a-f0-9]{64}$ ]]
 cd /opt/aigc-prompt
@@ -46,11 +48,43 @@ restore() {
   exit "$status"
 }
 trap restore EXIT
-sudo -n docker load -i "$incoming/image.tar.gz"
+# Reject escaping paths and links before extracting either trusted release archive.
+python3 - "$incoming" <<'PY_ARCHIVE'
+import pathlib
+import sys
+import tarfile
+root = pathlib.Path(sys.argv[1])
+for name in ("runtime", "source"):
+    with tarfile.open(root / f"{name}.tar.gz", "r:gz") as archive:
+        for member in archive.getmembers():
+            path = pathlib.PurePosixPath(member.name)
+            if path.is_absolute() or ".." in path.parts or not (member.isfile() or member.isdir()):
+                raise SystemExit(f"Unsafe archive member: {name}")
+        target = root / name
+        target.mkdir()
+        archive.extractall(target, filter="data")
+PY_ARCHIVE
+test -f "$incoming/runtime/app/server.js"
+node_major=$(sudo -n docker run --rm --entrypoint node "$current" -p 'process.versions.node.split(".")[0]')
+[[ "$node_major" == 24 ]] || { echo 'Existing runtime must use Node 24'; exit 1; }
 candidate="aigc-frontend:$release"
-sudo -n docker image inspect "$candidate" >/dev/null
-mkdir "$incoming/source"
-tar -xzf "$incoming/source.tar.gz" -C "$incoming/source"
+cat > "$incoming/runtime/Dockerfile" <<DOCKERFILE
+FROM aigc-frontend:rollback-$release
+USER root
+RUN rm -rf /app
+COPY --chown=node:node app/ /app/
+WORKDIR /app
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000 AIGC_DEMO_MODE=false
+LABEL org.opencontainers.image.revision="$revision"
+USER node
+EXPOSE 3000
+CMD ["node", "server.js"]
+DOCKERFILE
+sudo -n docker build --pull=false --network=none -t "$candidate" "$incoming/runtime" > "$incoming/build.log" 2>&1 || {
+  tail -40 "$incoming/build.log"
+  exit 1
+}
+[[ $(sudo -n docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$candidate") == "$revision" ]]
 # Preserve deployment-only environments and local dependencies.
 source_changed=true
 rsync -a --delete --exclude='.env*' --exclude='runtime.env' --exclude='node_modules' --exclude='.next' "$incoming/source/" frontend/

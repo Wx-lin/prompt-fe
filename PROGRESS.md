@@ -216,3 +216,9 @@
 - 第一部分已提交为 `2f1baa8`；第二部分保留为工作区变更，尚未部署。新接口和迁移详见后端docs/openapi.json、AGENT.md、PROGRESS.md。
 
 - 最终验收补充：常规桌面/移动Chrome浏览器46/46通过，4个opt-in真实数据库浏览器用例已在隔离服务另跑通过；所有临时schema和联调服务已清理。新投稿核心6模块语句覆盖80.4%（不是全应用覆盖率）。最终复核的ACL rollback过期ORM、清理100条后饥饿、后台PATCH并发3项均修复并验证，限定范围内无剩余阻塞。
+
+## 2026-10-13 GitHub main 自动部署
+
+- `.github/workflows/deploy.yml`：main push 自动 lint/typecheck/test/build 后发布；PR 只检查，不使用生产凭据。部署 SSH 凭据已接入 Actions Secrets。
+- `deploy/update-frontend.sh`：传输 Linux standalone 运行包和同提交源码，在已验证 Node 24 基础镜像离线构建；共享发布锁、归档校验、旧镜像状态核对、HTTPS 健康检查及失败回滚。
+- 针对公网 SCP 速度采用约 12 MiB 运行包，基础系统补丁不随轻量发布更新，见 docs/github-deployment.md。8 个真实 Bash mock 部署回归通过，前端 95 项测试及 lint/typecheck/build 通过；真实云端最终发布验收进行中。

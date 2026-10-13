@@ -10,7 +10,7 @@ describe('frontend release safeguards', () => {
     expect(script).toContain('flock -w 600 9');
     expect(script).toContain('flock -w 600 8');
     expect(script).not.toContain('flock -n');
-    expect(script.indexOf('sha256sum -c')).toBeLessThan(script.indexOf('docker load'));
+    expect(script.indexOf('sha256sum -c')).toBeLessThan(script.indexOf('docker build'));
     expect(script).toContain('Concurrent deployment detected');
     expect(script).toContain('rollback-');
     expect(script).not.toMatch(/docker (system prune|compose down)/);
@@ -48,7 +48,7 @@ it('continues exact image rollback and nginx reload when source restore fails', 
   }
 });
 
-it.each([['success', 0], ['health_failure', 1], ['stale_image', 1]] as const)('runs the release state machine: %s', async (mode, status) => {
+it.each([['success', 0], ['health_failure', 1], ['stale_image', 1], ['post_copy_stale', 1]] as const)('runs the release state machine: %s', async (mode, status) => {
   const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
@@ -63,21 +63,28 @@ it.each([['success', 0], ['health_failure', 1], ['stale_image', 1]] as const)('r
   mkdirSync(bin);
   mkdirSync(join(root, 'frontend'));
   writeFileSync(join(root, 'frontend', 'old.txt'), 'old');
-  for (const name of ['checksums.txt', 'image.tar.gz', 'source.tar.gz']) writeFileSync(join(incoming, name), 'fixture');
+  writeFileSync(join(incoming, 'checksums.txt'), 'fixture');
+  const fixture = join(root, 'fixture');
+  mkdirSync(join(fixture, 'app'), { recursive: true });
+  writeFileSync(join(fixture, 'app', 'server.js'), '// fixture');
+  for (const name of ['runtime', 'source']) {
+    expect(spawnSync('tar', ['-czf', join(incoming, `${name}.tar.gz`), '-C', fixture, '.']).status).toBe(0);
+  }
   const stub = (name: string, body: string) => writeFileSync(join(bin, name), `#!/usr/bin/env bash\n${body}\n`, { mode: 0o700 });
   stub('flock', 'exit 0');
   stub('sha256sum', 'exit 0');
   stub('df', 'printf "Avail\\n99999999999\\n"');
-  stub('rsync', 'printf "rsync\\n" >> "$LOG"');
-  stub('tar', 'exit 0');
+  stub('rsync', 'printf "rsync\\n" >> "$LOG"; touch "$COPIED"');
   stub('sleep', 'exit 0');
   stub('sudo', `echo "$*" >> "$LOG"
 shift
 case "$*" in
   'docker compose ps -q frontend') echo container ;;
+  'docker run --rm --entrypoint node '*) echo 24 ;;
+  'docker image inspect --format {{index .Config.Labels "org.opencontainers.image.revision"}} '*) echo '${'c'.repeat(40)}' ;;
   'docker inspect --format {{.Config.Image}} container') echo app:current ;;
   'docker inspect --format {{.Image}} container')
-    if [[ -f "$STATE" ]]; then echo '${candidate}'; elif [[ "$MODE" == stale_image ]]; then echo '${candidate}'; else echo '${old}'; fi ;;
+    if [[ -f "$STATE" ]]; then echo '${candidate}'; elif [[ "$MODE" == stale_image || ( "$MODE" == post_copy_stale && -f "$COPIED" ) ]]; then echo '${candidate}'; else echo '${old}'; fi ;;
   'docker image inspect --format {{.Id}} aigc-frontend:'*) echo '${candidate}' ;;
   'docker compose up -d --no-deps --no-build frontend') touch "$STATE" ;;
 esac
@@ -91,7 +98,7 @@ done`);
   writeFileSync(helper, readFileSync('deploy/update-frontend.sh', 'utf8').replaceAll('/opt/aigc-prompt', root));
   const log = join(root, 'calls');
   try {
-    const result = spawnSync('bash', [helper, release, old], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, MODE: mode, LOG: log, STATE: join(root, 'state') } });
+    const result = spawnSync('bash', [helper, release, old, 'c'.repeat(40)], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, MODE: mode, LOG: log, STATE: join(root, 'state'), COPIED: join(root, 'copied') } });
     expect(result.status, result.stderr).toBe(status);
     const calls = readFileSync(log, 'utf8');
     if (mode === 'success') expect(result.stdout).toContain('Frontend deployed');
@@ -99,7 +106,8 @@ done`);
       expect(calls).toContain(`docker tag ${old} app:current`);
       expect(calls.match(/nginx -s reload/g)).toHaveLength(2);
     }
-    if (mode === 'stale_image') expect(calls).not.toContain('docker load');
+    if (mode === 'stale_image') expect(calls).not.toContain('docker build');
+    if (mode === 'post_copy_stale') expect(calls).not.toContain('docker compose up');
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
