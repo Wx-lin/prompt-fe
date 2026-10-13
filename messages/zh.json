@@ -42,7 +42,10 @@
     "publishDescription": "暂时还不能提交作品，敬请期待。",
     "gotIt": "知道了",
     "preferences": "外观与语言设置",
-    "myWorks": "我的作品"
+    "myWorks": "我的作品",
+    "language": "语言",
+    "back": "返回",
+    "appearance": "外观"
   },
   "categories": {
     "portrait": "人像写真",

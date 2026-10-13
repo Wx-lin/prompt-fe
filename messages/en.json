@@ -42,7 +42,10 @@
     "publishDescription": "Submissions are not available yet. Stay tuned.",
     "gotIt": "Got it",
     "preferences": "Appearance and language settings",
-    "myWorks": "My artworks"
+    "myWorks": "My artworks",
+    "language": "Language",
+    "back": "Back",
+    "appearance": "Appearance"
   },
   "categories": {
     "portrait": "Portraits",

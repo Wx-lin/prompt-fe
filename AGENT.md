@@ -8,7 +8,8 @@
 
 ## 已确认的决定
 
-- **技术栈：** Next.js App Router、React、TypeScript、Base UI、CSS Modules。
+- **技术栈：** Next.js App Router、React、TypeScript、Base UI、CSS Modules；图标库为 `lucide-react`。
+- **图标复用：** 新增图标优先使用 Lucide 的现成图标并按需导入，统一尺寸、线宽和主题颜色。账户菜单已改用 Lucide；其他页面原有 `Icon` 暂保留，不未经确认全站替换。
 - **组件与样式：** 新功能优先复用项目已有组件、Base UI 交互原语和现有视觉风格；具体执行顺序见下方“新功能的组件复用约束”。不因新功能自行引入另一套视觉主题。
 - **主题：** 所有主题色集中在 `src/app/theme.css` 的 CSS 自定义属性中。组件引用语义 token；不要散落硬编码颜色或在多个组件里维护暗黑配色。
 - **搜索：** 搜索输入使用 Base UI Dialog；回车、热门词和最近搜索都导航到 `/?q=关键词`，结果与空状态直接出现在首页画廊。`/search` 只显示输入；旧 `/search?q=` 自动重定向。`@modal/page.tsx` 必须返回 null，确保首页软导航清除弹层。

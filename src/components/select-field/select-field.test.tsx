@@ -35,3 +35,20 @@ it("keeps ungrouped options flat", async () => {
   expect(await screen.findAllByRole("option")).toHaveLength(2);
   expect(screen.queryByRole("group")).not.toBeInTheDocument();
 });
+
+it("hides a redundant singleton family title while preserving the selectable value", async () => {
+  const user = userEvent.setup();
+  render(<SelectField label="Models" name="models" defaultValue="all" options={[
+    { label: "All models", value: "all" },
+    { label: "FLUX", value: "FLUX", group: "FLUX" },
+    { label: "Midjourney", value: "Midjourney", group: "Midjourney" },
+    { label: "Midjourney V7", value: "Midjourney V7", group: "Midjourney" },
+  ]} />);
+  await user.click(screen.getByRole("combobox", { name: "Models" }));
+  expect(await screen.findByRole("option", { name: "FLUX" })).toBeVisible();
+  expect(screen.getAllByText("FLUX")).toHaveLength(1);
+  expect(screen.queryByRole("group", { name: "FLUX" })).not.toBeInTheDocument();
+  expect(within(screen.getByRole("group", { name: "Midjourney" })).getAllByRole("option")).toHaveLength(2);
+  await user.click(screen.getByRole("option", { name: "FLUX" }));
+  expect(push).toHaveBeenCalledWith("/?q=cat&category=portrait&models=FLUX");
+});

@@ -26,11 +26,16 @@ export function SelectOptions({ options }: { options: SelectOption[] }) {
   const groups = [...new Set(options.map(option => option.group).filter(Boolean))];
   return <>
     {options.filter(option => !option.group).map(option => <OptionItem key={option.value} option={option} />)}
-    {groups.map(group => (
-      <Select.Group key={group}>
-        <Select.GroupLabel className={styles.groupLabel}>{group}</Select.GroupLabel>
-        {options.filter(option => option.group === group).map(option => <OptionItem key={option.value} option={option} />)}
-      </Select.Group>
-    ))}
+    {groups.map(group => {
+      const members = options.filter(option => option.group === group);
+      if (members.length === 1 && members[0].label === group)
+        return <OptionItem key={group} option={members[0]} />;
+      return (
+        <Select.Group key={group}>
+          <Select.GroupLabel className={styles.groupLabel}>{group}</Select.GroupLabel>
+          {members.map(option => <OptionItem key={option.value} option={option} />)}
+        </Select.Group>
+      );
+    })}
   </>;
 }

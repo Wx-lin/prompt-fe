@@ -12,6 +12,7 @@
   --color-hover: #f2f2f2;
   --color-action: #171717;
   --color-action-text: #ffffff;
+  --color-favorite: #b77905;
   --color-shadow: rgb(0 0 0 / 16%);
   --color-overlay: rgb(0 0 0 / 28%);
   --color-media-stage: #121212;
@@ -45,6 +46,7 @@
   --color-hover: #292929;
   --color-action: #f7f7f7;
   --color-action-text: #171717;
+  --color-favorite: #f6c453;
   --color-shadow: rgb(0 0 0 / 38%);
   --color-overlay: rgb(0 0 0 / 52%);
   --color-media-stage: #060606;
