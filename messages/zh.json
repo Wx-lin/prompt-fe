@@ -41,7 +41,8 @@
     "publishSoon": "发布功能即将上线",
     "publishDescription": "暂时还不能提交作品，敬请期待。",
     "gotIt": "知道了",
-    "preferences": "外观与语言设置"
+    "preferences": "外观与语言设置",
+    "myWorks": "我的作品"
   },
   "categories": {
     "portrait": "人像写真",
@@ -152,5 +153,38 @@
     "heading": "我的收藏",
     "empty": "还没有收藏任何提示词，去画廊看看吧。",
     "loadError": "暂时无法加载收藏内容，请稍后刷新重试。"
+  },
+  "submissions": {
+    "heading": "发布作品",
+    "myWorks": "我的作品",
+    "reviewHint": "提交后将进入人工审核，通过后会公开展示。请仅上传你有权分享的作品。",
+    "images": "作品图片",
+    "imageHint": "1–6 张 JPEG、PNG 或 WebP 图片，每张不超过 5 MB。第一张作为封面。",
+    "imageError": "最多 6 张 JPEG、PNG 或 WebP 图片，每张不超过 5 MB。",
+    "uploadError": "图片上传失败，请重试。已上传的图片会保留。",
+    "submitError": "提交失败，请稍后重试。",
+    "required": "请上传图片并选择分类和模型版本。",
+    "title": "作品标题",
+    "prompt": "提示词",
+    "description": "作品说明（选填）",
+    "category": "作品分类",
+    "model": "模型版本",
+    "submit": "提交审核",
+    "processing": "处理中…",
+    "preview": "作品预览 {index}",
+    "remove": "移除",
+    "back": "返回画廊",
+    "pending": "待审核",
+    "approved": "已公开",
+    "rejected": "未通过",
+    "offline": "已下架",
+    "empty": "还没有提交的作品。",
+    "loadError": "作品列表暂时无法加载，请重试。",
+    "retry": "重试",
+    "more": "加载更多",
+    "submitted": "提交成功，作品正在等待审核。",
+    "catalogError": "分类或模型暂时无法加载，请刷新后重试。",
+    "version": "补充模型版本（选填）",
+    "versionHint": "例如 V6.1。新版本会在作品审核通过后加入模型目录。"
   }
 }

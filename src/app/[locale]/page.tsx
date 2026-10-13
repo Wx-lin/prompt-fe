@@ -3,7 +3,7 @@ import { GalleryPage } from "@/features/gallery/components/gallery-page";
 import { demoPrompts } from "@/features/gallery/data/demo-prompts";
 import { sortGalleryItems } from "@/features/gallery/lib/sort-items";
 import { getSessionUser } from "@/lib/auth/session";
-import { getCategories, getPromptFeed, searchPrompts } from "@/lib/api/client";
+import { getCategories, getModels, getPromptFeed, searchPrompts } from "@/lib/api/client";
 import type { GalleryCard, PromptListItem } from "@/types/prompt";
 
 type RouteParameters = Promise<{ locale: string }>;
@@ -27,11 +27,15 @@ export default async function Home({ params, searchParams }: { params: RoutePara
   const query = (firstValue(resolvedSearchParams.q) ?? "").trim();
   const useDemoContent = process.env.NODE_ENV !== "production" && process.env.AIGC_DEMO_MODE !== "false";
   const filters = { category: activeCategory, sort: activeSort, model: activeModel };
-  const [categories, feed, user] = await Promise.all([
+  const demoModels = [...new Set(demoPrompts.flatMap(item => item.models))].map(label => ({
+    key: label, label, group: label.startsWith("DALL") ? "DALL·E" : label.startsWith("FLUX") ? "FLUX" : label,
+  }));
+  const [categories, feed, user, models] = await Promise.all([
     getCategories(),
     useDemoContent ? Promise.resolve(null) :
       (query ? searchPrompts(query, filters) : getPromptFeed(filters)).catch(() => null),
     getSessionUser(),
+    useDemoContent ? Promise.resolve(demoModels) : getModels().catch(() => []),
   ]);
   const demoInVisualRowOrder = [0, 2, 4, 6, 8, 1, 3, 5, 7, 9].map((index) => demoPrompts[index]);
   const demoItems = demoInVisualRowOrder.filter((item) =>
@@ -44,7 +48,6 @@ export default async function Home({ params, searchParams }: { params: RoutePara
   const items = useDemoContent
     ? keepReferenceOrder ? demoItems : sortGalleryItems(demoItems, activeSort)
     : (feed?.items ?? []).map(toGalleryCard);
-  const models = [...new Set(demoPrompts.flatMap((item) => item.models))];
 
   return (
     <GalleryPage

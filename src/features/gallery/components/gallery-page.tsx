@@ -1,5 +1,7 @@
 "use client";
 
+import type { ModelOption } from "@/lib/api/client";
+
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SiteHeader } from "@/features/gallery/components/site-header";
@@ -14,7 +16,7 @@ interface GalleryPageProps {
   activeCategory: string;
   activeSort: string;
   activeModel: string;
-  models: string[];
+  models: ModelOption[];
   query?: string;
   loadError?: boolean;
   hasMore?: boolean;

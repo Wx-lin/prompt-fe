@@ -49,6 +49,9 @@ export function UserMenu({ user, preferences }: { user: CurrentUser; preferences
               <Icon name="bookmark" size={16} />
               {t("myCollections")}
             </Menu.Item>
+            <Menu.Item className={styles.item} render={<Link href="/my-works" />}>
+              {t("myWorks")}
+            </Menu.Item>
             {preferences}
             <Menu.Item className={styles.item} onClick={logout}>
               {t("logout")}

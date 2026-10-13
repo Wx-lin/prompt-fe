@@ -1,6 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import { safeReturnTo } from "@/lib/auth/return-to";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, MouseEvent } from "react";
 import { useScrollLock } from "@/lib/scroll/use-scroll-lock";
@@ -42,6 +44,7 @@ export function LoginPage() {
   useScrollLock();
   const t = useTranslations("login");
   const router = useRouter();
+  const returnTo = safeReturnTo(useSearchParams().get("returnTo"));
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<LoginStep>("email");
@@ -69,14 +72,15 @@ export function LoginPage() {
           setMessage(msg);
           return;
         }
-        router.push("/");
+        router.push(returnTo);
+        router.refresh();
       } catch {
         setMessage(t("loginFailed"));
       } finally {
         setBusy(false);
       }
     },
-    [router, t]
+    [router, t, returnTo]
   );
 
   useEffect(() => {
@@ -146,7 +150,8 @@ export function LoginPage() {
     try {
       const response = await fetch("/api/auth/verify-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, code }) });
       if (!response.ok) throw new Error(t("codeInvalid"));
-      router.push("/");
+      router.push(returnTo);
+      router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t("loginFailed"));
     } finally {

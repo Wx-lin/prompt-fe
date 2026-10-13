@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PromptListItem, PromptListResponse } from "@/types/prompt";
-import { getCategories, getPromptDetail, getPromptFeed, searchPrompts } from "./client";
+import { getCategories, getModels, getPromptDetail, getPromptFeed, searchPrompts } from "./client";
 import { fallbackCategories } from "@/features/gallery/data/categories";
 
 vi.mock("server-only", () => ({}));
@@ -60,39 +60,30 @@ describe("searchPrompts", () => {
     expect(result.items[0].id).toBe("10");
   });
 
-  it("finds a category and model match beyond the first 50 results", async () => {
-    const matchingItem = prompt(51, { category: "portrait", models: ["FLUX.1"] });
-    const fetchMock = mockSearchApi([
-      ...Array.from({ length: 50 }, (_, index) => prompt(index)),
-      matchingItem,
-    ]);
-    const result = await searchPrompts("猫咪", { category: "portrait", model: "FLUX.1" });
-    expect(result).toEqual({ items: [matchingItem], total: 1, page: 1, page_size: 20, has_more: false });
-    expect(fetchMock.mock.calls.map(([url]) => new URL(url).searchParams.get("page_size"))).toEqual(["50", "50"]);
+  it.each(["popular", "hot"])("forwards %s search filters and pagination in one request", async (sort) => {
+    const body = { items: [prompt(51, { models: ["FLUX.1"] })], total: 7, page: 2, page_size: 1, has_more: true };
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(body));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await searchPrompts("猫咪", { category: "portrait", model: "FLUX.1", sort, page: 2, pageSize: 1 })).toEqual(body);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(Object.fromEntries(new URL(fetchMock.mock.calls[0][0]).searchParams)).toEqual({
+      q: "猫咪", category: "portrait", models: "FLUX.1", sort, page: "2", page_size: "1",
+    });
   });
 
-  it.each(["popular", "hot"])("sorts %s across all upstream pages before paginating", async (sort) => {
-    const fetchMock = mockSearchApi(Array.from({ length: 51 }, (_, index) => prompt(index)));
-    const result = await searchPrompts("猫咪", { sort, page: 2, pageSize: 2 });
-    expect(result.items.map((item) => item.id)).toEqual(["48", "47"]);
-    expect(result).toMatchObject({ total: 51, page: 2, page_size: 2, has_more: true });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
-
-  it("reports no next page when filtered results are exhausted", async () => {
-    mockSearchApi([prompt(1), prompt(2)]);
-    const result = await searchPrompts("猫咪", { model: "Midjourney", page: 3, pageSize: 1 });
-    expect(result).toEqual({ items: [], total: 2, page: 3, page_size: 1, has_more: false });
-  });
-
-  it("propagates an upstream failure instead of returning partial matches", async () => {
-    const fetchMock = mockSearchApi(Array.from({ length: 51 }, (_, index) => prompt(index)));
-    const firstPage = await fetchMock("http://api.test/api/prompts/search?q=猫咪&page=1&page_size=50");
-    fetchMock.mockClear();
-    fetchMock.mockResolvedValueOnce(firstPage).mockResolvedValueOnce(new Response(null, { status: 503 }));
+  it("propagates upstream failures", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 503 })));
     await expect(searchPrompts("猫咪", { sort: "popular" })).rejects.toThrow("API request failed (503)");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("loads version-specific models from the shared catalog", async () => {
+    const models = [{ key: "Midjourney V6", label: "Midjourney V6", group: "Midjourney" }];
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(models));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await getModels()).toEqual(models);
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/models");
+  });
+
 });
 
 describe("existing API request contracts", () => {

@@ -41,7 +41,8 @@
     "publishSoon": "Publishing is coming soon",
     "publishDescription": "Submissions are not available yet. Stay tuned.",
     "gotIt": "Got it",
-    "preferences": "Appearance and language settings"
+    "preferences": "Appearance and language settings",
+    "myWorks": "My artworks"
   },
   "categories": {
     "portrait": "Portraits",
@@ -152,5 +153,38 @@
     "heading": "My Collections",
     "empty": "No saved prompts yet — browse the gallery to find some.",
     "loadError": "Couldn't load your collections right now, please refresh and try again."
+  },
+  "submissions": {
+    "heading": "Publish artwork",
+    "myWorks": "My artworks",
+    "reviewHint": "Submissions are manually reviewed before appearing publicly. Only share artwork you have permission to publish.",
+    "images": "Artwork images",
+    "imageHint": "1–6 JPEG, PNG or WebP images, up to 5 MB each. The first image is the cover.",
+    "imageError": "Choose up to 6 JPEG, PNG or WebP images, up to 5 MB each.",
+    "uploadError": "Upload failed. Try again; completed uploads are kept.",
+    "submitError": "Could not submit. Please try again.",
+    "required": "Upload an image and select a category and model version.",
+    "title": "Artwork title",
+    "prompt": "Prompt",
+    "description": "Description (optional)",
+    "category": "Category",
+    "model": "Model version",
+    "submit": "Submit for review",
+    "processing": "Processing…",
+    "preview": "Artwork preview {index}",
+    "remove": "Remove",
+    "back": "Back to gallery",
+    "pending": "Pending review",
+    "approved": "Published",
+    "rejected": "Not approved",
+    "offline": "Taken down",
+    "empty": "You have no submissions yet.",
+    "loadError": "Could not load your artworks. Please retry.",
+    "retry": "Retry",
+    "more": "Load more",
+    "submitted": "Submitted successfully and awaiting review.",
+    "catalogError": "Categories or models are unavailable. Refresh to retry.",
+    "version": "Additional model version (optional)",
+    "versionHint": "For example, V6.1. New versions join the model catalog after your artwork is approved."
   }
 }

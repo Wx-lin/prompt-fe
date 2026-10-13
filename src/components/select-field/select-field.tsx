@@ -3,12 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select } from "@base-ui/react/select";
 import { Icon } from "@/components/icons/icon";
+import { SelectOptions, type SelectOption } from "./select-options";
 import styles from "./select-field.module.css";
-
-interface SelectOption {
-  label: string;
-  value: string;
-}
 
 interface SelectFieldProps {
   label: string;
@@ -62,16 +58,7 @@ export function SelectField({ label, name, options, defaultValue }: SelectFieldP
         >
           <Select.Popup className={styles.popup}>
             <Select.List className={styles.list}>
-              {options.map((option) => (
-                <Select.Item key={option.value} value={option.value} className={styles.item}>
-                  <Select.ItemText>{option.label}</Select.ItemText>
-                  <Select.ItemIndicator className={styles.indicator}>
-                    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none">
-                      <path d="m3 8 3 3 7-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </Select.ItemIndicator>
-                </Select.Item>
-              ))}
+              <SelectOptions options={options} />
             </Select.List>
           </Select.Popup>
         </Select.Positioner>

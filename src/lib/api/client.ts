@@ -1,7 +1,6 @@
 import "server-only";
 import type { Category, CurrentUser, PromptDetail, PromptListResponse } from "@/types/prompt";
 import { fallbackCategories } from "@/features/gallery/data/categories";
-import { sortGalleryItems } from "@/features/gallery/lib/sort-items";
 
 const defaultApiBaseUrl = "http://localhost:8000";
 
@@ -41,41 +40,26 @@ export async function getPromptFeed(query: PromptQuery = {}): Promise<PromptList
   return request<PromptListResponse>(`/api/prompts?${params.toString()}`);
 }
 
-function requestSearchPage(query: string, page: number, pageSize: number): Promise<PromptListResponse> {
-  const params = new URLSearchParams({ q: query, page: String(page), page_size: String(pageSize) });
+export async function searchPrompts(query: string, filters: PromptQuery = {}): Promise<PromptListResponse> {
+  const params = new URLSearchParams({
+    q: query,
+    page: String(filters.page ?? 1),
+    page_size: String(filters.pageSize ?? 20),
+    sort: filters.sort ?? "latest",
+  });
+  if (filters.category && filters.category !== "all") params.set("category", filters.category);
+  if (filters.model && filters.model !== "all") params.append("models", filters.model);
   return request<PromptListResponse>(`/api/prompts/search?${params.toString()}`);
 }
 
-export async function searchPrompts(query: string, filters: PromptQuery = {}): Promise<PromptListResponse> {
-  const page = filters.page ?? 1;
-  const pageSize = filters.pageSize ?? 20;
-  const category = filters.category === "all" ? undefined : filters.category;
-  const model = filters.model === "all" ? undefined : filters.model;
-  const sort = filters.sort ?? "latest";
-  if (!category && !model && sort !== "popular" && sort !== "hot") {
-    return requestSearchPage(query, page, pageSize);
-  }
+export interface ModelOption {
+  key: string;
+  label: string;
+  group: string;
+}
 
-  // Temporary server adapter: replace with native backend search filters/sort later.
-  // Filtering one upstream page would incorrectly hide matches on later pages.
-  let response = await requestSearchPage(query, 1, 50);
-  let allItems = response.items;
-  for (let nextPage = 2; response.has_more; nextPage += 1) {
-    response = await requestSearchPage(query, nextPage, 50);
-    allItems = [...allItems, ...response.items];
-  }
-
-  const matchingItems = allItems.filter((item) =>
-    (!category || item.category === category) && (!model || item.models.includes(model)),
-  );
-  const sortedItems = sortGalleryItems(matchingItems, sort);
-  return {
-    items: sortedItems.slice((page - 1) * pageSize, page * pageSize),
-    total: sortedItems.length,
-    page,
-    page_size: pageSize,
-    has_more: page * pageSize < sortedItems.length,
-  };
+export async function getModels(): Promise<ModelOption[]> {
+  return request<ModelOption[]>("/api/models");
 }
 
 export async function getPromptDetail(id: string, accessToken?: string): Promise<PromptDetail> {

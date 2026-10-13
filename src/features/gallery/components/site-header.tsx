@@ -1,5 +1,7 @@
 "use client";
 
+import type { ModelOption } from "@/lib/api/client";
+
 import { useTranslations } from "next-intl";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { SelectField } from "@/components/select-field/select-field";
@@ -18,7 +20,7 @@ interface SiteHeaderProps {
   activeCategory: string;
   activeSort: string;
   activeModel: string;
-  models: string[];
+  models: ModelOption[];
   query?: string;
   user?: CurrentUser | null;
   showNavigationRow?: boolean;
@@ -57,7 +59,7 @@ export function SiteHeader({
   ];
   const modelOptions = [
     { label: t("allModels"), value: "all" },
-    ...models.map((model) => ({ label: model, value: model })),
+    ...models.map((model) => ({ label: model.label, value: model.key, group: model.group })),
   ];
 
   return (
