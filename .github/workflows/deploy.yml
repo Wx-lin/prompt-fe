@@ -64,7 +64,8 @@ jobs:
           fi
           test -f runtime/app/server.js
           tar -czf release/runtime.tar.gz -C runtime .
-          git archive "$GITHUB_SHA" | gzip > release/source.tar.gz
+          git archive "$GITHUB_SHA" Dockerfile .dockerignore .gitignore package.json package-lock.json next.config.ts tsconfig.json eslint.config.mjs messages public src deploy | gzip > release/source.tar.gz
+          du -b release/runtime.tar.gz release/source.tar.gz
           cp deploy/update-frontend.sh release/update-frontend.sh
           (cd release && sha256sum runtime.tar.gz source.tar.gz update-frontend.sh > checksums.txt)
           # Validated release names and hashes intentionally expand before SSH.
