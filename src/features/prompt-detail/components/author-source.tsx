@@ -7,6 +7,7 @@ import type { SourcePlatform } from "../lib/source-platform";
 import styles from "./author-source.module.css";
 
 const platformIcons: Record<SourcePlatform, string> = {
+  x: "/brand-icons/x.svg",
   xiaohongshu: "/brand-icons/xiaohongshu.svg",
   weibo: "/brand-icons/sinaweibo.svg",
   kuaishou: "/brand-icons/kuaishou.svg",

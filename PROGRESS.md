@@ -247,3 +247,10 @@
 分类测试稳定性复核：Select 的 portal 在 mounted/定位完成后才进入可访问树，改用 findByRole 等待实际选项可访问，不通过 hidden 绕过界面状态。发布脚本测试执行完整 30 次健康探测及子进程，仅该组超时设 15 秒，保留失败/回滚断言；全量 142 个测试连续两次通过（22.55 秒、28.87 秒）。
 
 - 2026-10-14 父任务集成验收：主站142单测全量通过，lint/typecheck/生产build通过。连接真实FastAPI和本机PostgreSQL随机schema，分类主站与后台桌面/手机4 E2E通过，后台审核实际提交零库存branding成功；覆盖旧分类编辑展示、12项目录、零库存、双语深浅及保留筛选。新增e2e/admin-categories.spec.ts与后端tests/category_e2e_app.py为可复现本机fixture；测试服务与schema已清理，生产未发布。
+
+
+## 2026-10-14 X 原文入口
+
+- 作者来源组件复用现有外链、平台图标与样式，支持 HTTPS 的 x.com / twitter.com 原帖，展示 X 标识和“查看原文”。保留精确域名/子域校验、noopener noreferrer，中英文文案同步。
+- 验证：相关28项测试及全量158项测试、lint/typecheck/生产build通过，npm audit零漏洞，独立提交前审阅无阻断。公网旧版缺少X原文锚点，部署后需验证真实作品详情与图标。
+- 用户已授权提交并部署此修复；不包含工作区收藏配色修改。

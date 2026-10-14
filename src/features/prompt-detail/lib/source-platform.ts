@@ -1,6 +1,7 @@
-export type SourcePlatform = "xiaohongshu" | "weibo" | "kuaishou";
+export type SourcePlatform = "xiaohongshu" | "weibo" | "kuaishou" | "x";
 
 const platformDomains: ReadonlyArray<readonly [SourcePlatform, readonly string[]]> = [
+  ["x", ["x.com", "twitter.com"]],
   ["xiaohongshu", ["xiaohongshu.com", "xhslink.com"]],
   ["weibo", ["weibo.com", "weibo.cn"]],
   ["kuaishou", ["kuaishou.com", "v.kuaishou.com"]],

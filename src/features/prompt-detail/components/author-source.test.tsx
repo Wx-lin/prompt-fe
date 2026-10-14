@@ -7,6 +7,8 @@ afterEach(cleanup);
 
 describe("AuthorSource", () => {
   it.each([
+    ["https://x.com/creator/status/123", "x"],
+    ["https://twitter.com/creator/status/123", "x"],
     ["https://xiaohongshu.com/explore/1", "xiaohongshu"],
     ["https://weibo.com/1/2", "weibo"],
     ["https://kuaishou.com/short-video/1", "kuaishou"],
