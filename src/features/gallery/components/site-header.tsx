@@ -5,7 +5,8 @@ import type { ModelOption } from "@/lib/api/client";
 import { useTranslations } from "next-intl";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { SelectField } from "@/components/select-field/select-field";
-import { PreferencesMenu } from "@/features/auth/components/preferences-menu";
+import { ThemeToggleControl } from "@/components/theme-provider/theme-toggle-control";
+import { LanguageToggle } from "./language-toggle";
 import { AccountPreferences } from "@/features/auth/components/account-preferences";
 import { PublishButton } from "./publish-button";
 import { UserMenu } from "@/features/auth/components/user-menu";
@@ -71,7 +72,12 @@ export function SiteHeader({
           <SearchTriggerGroup query={query} filters={popoverFilters.toString()} />
         </div>
         <div className={styles.actions}>
-          {!user && <PreferencesMenu />}
+          {!user && (
+            <>
+              <ThemeToggleControl />
+              <LanguageToggle ariaLabel={t("languageAriaLabel")} />
+            </>
+          )}
           <PublishButton />
           {user ? (
             <UserMenu user={user} preferences={<AccountPreferences />} />

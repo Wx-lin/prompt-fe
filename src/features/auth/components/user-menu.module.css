@@ -77,7 +77,7 @@
 .preferencesTrigger:hover, .preferencesTrigger[data-popup-open] { background: var(--color-hover); }
 .preferencesTrigger:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 
-.favorite { color: var(--color-favorite); fill: var(--color-favorite); }
+.favorite { color: currentColor; fill: currentColor; }
 .rowLabel { flex: 1; }
 .current { color: var(--color-text-muted); font-size: 12px; white-space: nowrap; }
 .check { margin-left: auto; display: inline-flex; }
