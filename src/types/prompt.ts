@@ -37,6 +37,8 @@ export interface PromptDetail extends PromptListItem {
 }
 
 export interface Category {
+  label_en?: string;
+  order?: number;
   key: string;
   label: string;
   count: number;

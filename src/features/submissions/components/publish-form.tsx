@@ -7,6 +7,7 @@ import { SelectOptions } from "@/components/select-field/select-options";
 import { Select } from "@base-ui/react/select";
 import { useRouter } from "@/i18n/navigation";
 import { ImageUpload } from "./image-upload";
+import { isCurrentCategory } from "@/features/gallery/data/categories";
 import type { Category } from "@/types/prompt";
 import type { SubmissionUpload } from "@/types/submission";
 import styles from "./submissions.module.css";
@@ -62,6 +63,7 @@ export function PublishForm({ categories, models }: {
   const t = useTranslations("submissions");
   const router = useRouter();
   const [uploads, setUploads] = useState<SubmissionUpload[]>([]);
+  const tCategories = useTranslations("categories");
   const [category, setCategory] = useState("");
   const [model, setModel] = useState("");
   const [version, setVersion] = useState("");
@@ -139,7 +141,7 @@ export function PublishForm({ categories, models }: {
           </p>
           <Choice
             label={t("category")}
-            options={categories.filter(item => item.key !== "all")}
+            options={categories.filter(item => isCurrentCategory(item.key)).map(item => ({ ...item, label: tCategories(item.key) }))}
             value={category}
             onChange={setCategory}
           />

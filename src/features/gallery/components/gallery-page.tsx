@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SiteHeader } from "@/features/gallery/components/site-header";
 import { GalleryGrid } from "@/features/gallery/components/gallery-grid";
 import { Link } from "@/i18n/navigation";
+import { legacyCategoryKeys } from "@/features/gallery/data/categories";
 import type { Category, CurrentUser, GalleryCard, PromptListItem, PromptListResponse } from "@/types/prompt";
 import styles from "./gallery-page.module.css";
 
@@ -129,14 +130,18 @@ export function GalleryPage({
         models={models}
         query={query}
         user={user}
-        showNavigationRow={!query}
+        showNavigationRow
       />
+      {legacyCategoryKeys.includes(activeCategory) && <section className={styles.searchSummary} role="status">{t("categoryAdjusted")}</section>}
       {query && (
         <section className={styles.searchSummary} aria-label={t("searchResultsAriaLabel")}>
           <h1>{t("searchResultsHeading", { query })}</h1>
           <span>{t("searchResultsCount", { count: loadedItems.length })}</span>
           <Link href={clearSearchHref} aria-label={t("clearSearchAriaLabel")}>{t("clearSearch")}</Link>
         </section>
+      )}
+      {!loadError && loadedItems.length === 0 && filters.size > 0 && (
+        <section className={styles.searchSummary}><Link href={query ? `/?${new URLSearchParams({ q: query })}` : "/"}>{t("clearFilters")}</Link></section>
       )}
       {paginationError && (
         <div role="alert">

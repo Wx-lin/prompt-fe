@@ -222,3 +222,17 @@
 - `.github/workflows/deploy.yml`：main push 自动 lint/typecheck/test/build 后发布；PR 只检查，不使用生产凭据。部署 SSH 凭据已接入 Actions Secrets。
 - `deploy/update-frontend.sh`：传输 Linux standalone 运行包和同提交源码，在已验证 Node 24 基础镜像离线构建；共享发布锁、归档校验、旧镜像状态核对、HTTPS 健康检查及失败回滚。
 - 针对公网 SCP 速度采用约 12 MiB 运行包，基础系统补丁不随轻量发布更新，见 docs/github-deployment.md。8 个真实 Bash mock 部署回归通过，前端 95 项测试及 lint/typecheck/build 通过；真实云端最终发布验收进行中。
+
+
+## 2026-10-14 十二分类接入（本地实现，待迁移与部署）
+
+- 复用现有 CategoryNav、Base UI Select/SelectOptions 与主题样式；固定推荐、人像、头像、海报、插画入口，全部分类提供十二项、公开数量与零库存“暂无内容”禁选。手机保留既有横向导航与可滚动选择列表。推荐仍通过现有排序逻辑，不新增分类 key。
+- 分类切换继续保留关键词、模型、排序并重置分页；搜索也显示筛选导航。组合条件无结果可清除筛选并保留关键词。摄影、图片编辑、workflow 旧 URL 保留查询条件并显示调整提示，不加入新目录或投稿。
+- 十二分类 fallback 与中英文名称同步需求目录，增加目录一致性测试；详情用新分类名称；投稿十二项包含零库存，排除旧分类。SelectOptions 增加 disabled 支持，沿用既有控件。
+- 核心文件：gallery/data/categories.ts、gallery/components/category-nav.tsx/gallery-page.tsx、select-field/select-options、publish-form、detail-page、messages/{zh,en}.json。用户已有 header/menu/card 样式修改保留。
+- 验证：先 RED 后 GREEN；全量 141 个测试通过，随后新增清除筛选测试及该文件 12 个测试通过（共 142 个）；lint、typecheck、Turbopack 生产构建通过。分类导航语句/函数/行覆盖率 100%、分支 93.75%。本地无数据库 fixture 下桌面/手机 2 个 E2E 通过，覆盖中英、深浅、十二选项、零库存禁选、组合条件/分页及旧链接提示。
+- 边界：浏览器测试验证界面及参数传递，真实数据库公开计数/兼容集合/组合分页由后端集成验证；尚未修改生产数据、提交或部署。后端新目录必须与已确认迁移和兼容集合一起上线。新 E2E 需运行具有十二分类目录与商品零库存的隔离数据。
+
+分类测试稳定性复核：Select 的 portal 在 mounted/定位完成后才进入可访问树，改用 findByRole 等待实际选项可访问，不通过 hidden 绕过界面状态。发布脚本测试执行完整 30 次健康探测及子进程，仅该组超时设 15 秒，保留失败/回滚断言；全量 142 个测试连续两次通过（22.55 秒、28.87 秒）。
+
+- 2026-10-14 父任务集成验收：主站142单测全量通过，lint/typecheck/生产build通过。连接真实FastAPI和本机PostgreSQL随机schema，分类主站与后台桌面/手机4 E2E通过，后台审核实际提交零库存branding成功；覆盖旧分类编辑展示、12项目录、零库存、双语深浅及保留筛选。新增e2e/admin-categories.spec.ts与后端tests/category_e2e_app.py为可复现本机fixture；测试服务与schema已清理，生产未发布。

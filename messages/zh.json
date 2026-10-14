@@ -25,7 +25,7 @@
     "login": "登录",
     "categoriesAriaLabel": "提示词分类",
     "filtersAriaLabel": "画廊筛选",
-    "allCategory": "全部",
+    "allCategory": "推荐",
     "allCategoriesTrigger": "全部分类",
     "sortLabel": "排序方式",
     "modelLabel": "模型",
@@ -46,17 +46,22 @@
     "language": "语言",
     "back": "返回",
     "appearance": "外观",
-    "sortRecommended": "推荐"
+    "sortRecommended": "推荐",
+    "noContent": "暂无内容"
   },
   "categories": {
     "portrait": "人像写真",
-    "avatar": "头像 & IP",
-    "poster": "海报 & 封面",
-    "illustration": "插画 & 概念艺术",
-    "photography": "模拟摄影",
-    "character": "角色 & 人物设计",
-    "image_edit": "图片编辑",
-    "workflow": "工作流 & 技巧"
+    "avatar": "头像",
+    "poster": "海报与封面",
+    "product": "商品与电商",
+    "illustration": "插画与绘本",
+    "character": "角色与 IP",
+    "sticker": "表情包与贴纸",
+    "wallpaper": "壁纸与背景",
+    "infographic": "信息图解",
+    "branding": "Logo 与品牌",
+    "architecture": "空间与建筑",
+    "scene": "风景与静物"
   },
   "search": {
     "recentSearches": "最近搜索",
@@ -85,7 +90,9 @@
     "loadingMore": "加载更多中…",
     "noMoreItems": "已经到底啦",
     "loadMoreError": "加载失败，请重试",
-    "retryLoadMore": "重新加载"
+    "retryLoadMore": "重新加载",
+    "categoryAdjusted": "此分类已调整，可使用新分类浏览。",
+    "clearFilters": "清除筛选"
   },
   "card": {
     "viewAriaLabel": "查看提示词：{title}",

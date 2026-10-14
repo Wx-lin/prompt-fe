@@ -27,6 +27,7 @@ export function SelectField({ label, name, options, defaultValue }: SelectFieldP
       params.set(name, value);
     }
 
+    params.delete("page");
     const query = params.toString();
     router.push(query ? `/?${query}` : "/");
   }

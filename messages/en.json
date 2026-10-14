@@ -25,7 +25,7 @@
     "login": "Log in",
     "categoriesAriaLabel": "Prompt categories",
     "filtersAriaLabel": "Gallery filters",
-    "allCategory": "All",
+    "allCategory": "Recommended",
     "allCategoriesTrigger": "All categories",
     "sortLabel": "Sort by",
     "modelLabel": "Model",
@@ -46,17 +46,22 @@
     "language": "Language",
     "back": "Back",
     "appearance": "Appearance",
-    "sortRecommended": "Recommended"
+    "sortRecommended": "Recommended",
+    "noContent": "No content"
   },
   "categories": {
     "portrait": "Portraits",
-    "avatar": "Avatars & IP",
+    "avatar": "Avatars",
     "poster": "Posters & Covers",
-    "illustration": "Illustration & Concept Art",
-    "photography": "Simulated Photography",
-    "character": "Character Design",
-    "image_edit": "Image Editing",
-    "workflow": "Workflows & Techniques"
+    "product": "Products & E-commerce",
+    "illustration": "Illustrations & Storybooks",
+    "character": "Characters & IP",
+    "sticker": "Memes & Stickers",
+    "wallpaper": "Wallpapers & Backgrounds",
+    "infographic": "Infographics",
+    "branding": "Logos & Branding",
+    "architecture": "Spaces & Architecture",
+    "scene": "Scenery & Still Life"
   },
   "search": {
     "recentSearches": "Recent searches",
@@ -85,7 +90,9 @@
     "loadingMore": "Loading more…",
     "noMoreItems": "You've reached the end",
     "loadMoreError": "Unable to load more. Please try again.",
-    "retryLoadMore": "Retry loading"
+    "retryLoadMore": "Retry loading",
+    "categoryAdjusted": "This category has changed. Browse using the new categories.",
+    "clearFilters": "Clear filters"
   },
   "card": {
     "viewAriaLabel": "View prompt: {title}",

@@ -7,11 +7,12 @@ export interface SelectOption {
   label: string;
   value: string;
   group?: string;
+  disabled?: boolean;
 }
 
 function OptionItem({ option }: { option: SelectOption }) {
   return (
-    <Select.Item value={option.value} className={styles.item}>
+    <Select.Item disabled={option.disabled} value={option.value} className={styles.item}>
       <Select.ItemText>{option.label}</Select.ItemText>
       <Select.ItemIndicator className={styles.indicator}>
         <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none">

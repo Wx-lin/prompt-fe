@@ -81,7 +81,7 @@ it("uploads an image then submits its id with the selected full model version", 
   await user.type(screen.getByLabelText("作品标题"), "猫咪");
   await user.type(screen.getByLabelText("提示词"), "A watercolor cat");
   await user.click(screen.getByRole("combobox", { name: "作品分类" }));
-  await user.click(await screen.findByRole("option", { name: "插画" }));
+  await user.click(await screen.findByRole("option", { name: "插画与绘本" }));
   await waitFor(() => expect(screen.getByRole("combobox", { name: "作品分类" })).toHaveAttribute("aria-expanded", "false"));
   await user.click(screen.getByRole("combobox", { name: "模型版本" }));
   expect(await screen.findByRole("group", { name: "Midjourney" })).toBeVisible();
@@ -126,7 +126,7 @@ it("accepts a new version only for a generic family and submits the full name", 
   await user.type(screen.getByLabelText("作品标题"), "猫咪");
   await user.type(screen.getByLabelText("提示词"), "A watercolor cat");
   await user.click(screen.getByRole("combobox", { name: "作品分类" }));
-  await user.click(await screen.findByRole("option", { name: "插画" }));
+  await user.click(await screen.findByRole("option", { name: "插画与绘本" }));
   await waitFor(() => expect(screen.getByRole("combobox", { name: "作品分类" })).toHaveAttribute("aria-expanded", "false"));
   await user.click(screen.getByRole("combobox", { name: "模型版本" }));
   await user.click(await screen.findByRole("option", { name: /^Midjourney$/ }));
@@ -151,4 +151,14 @@ it("keeps text fields editable but blocks submission during pending and failed u
   expect(screen.getByRole("button", { name: "提交审核" })).toBeDisabled();
   await user.click(screen.getByRole("button", { name: /移除.*cat.png/ }));
   expect(screen.getByRole("button", { name: "提交审核" })).not.toBeDisabled();
+});
+
+it("allows a zero-inventory new category but excludes all legacy categories", async () => {
+  const { fallbackCategories } = await import("@/features/gallery/data/categories");
+  render(<NextIntlClientProvider locale="zh" messages={messages}><PublishForm categories={[...fallbackCategories, { key: "photography", label: "模拟摄影", count: 10 }, { key: "image_edit", label: "图片编辑", count: 10 }, { key: "workflow", label: "工作流", count: 10 }]} models={[{ key: "FLUX", label: "FLUX" }]} /></NextIntlClientProvider>);
+  await userEvent.click(screen.getByRole("combobox", { name: "作品分类" }));
+  expect(await screen.findAllByRole("option")).toHaveLength(12);
+  expect(screen.queryByRole("option", {name: "模拟摄影"})).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("option", {name: "商品与电商"}));
+  expect(screen.getByRole("combobox", {name: "作品分类"})).toHaveTextContent("商品与电商");
 });

@@ -52,3 +52,16 @@ it.each(["recommended", "latest", "popular", "hot"])("preserves %s ordering and 
   expect(cleared.searchParams.get("models")).toBe("FLUX");
   expect(cleared.searchParams.has("q")).toBe(false);
 });
+
+it.each(["photography", "image_edit", "workflow"])("explains legacy %s links while retaining their pagination filter", async category => {
+ const fetcher = vi.fn().mockResolvedValue(Response.json({items: [], has_more: false}));
+ vi.stubGlobal("fetch", fetcher);
+ render(<GalleryPage {...props} activeCategory={category} query="cat" activeModel="FLUX" activeSort="hot" />);
+ expect(screen.getByRole("status")).toHaveTextContent("categoryAdjusted");
+ await act(async () => notify());
+ expect(new URL(fetcher.mock.calls[0][0], "http://test").searchParams.get("category")).toBe(category);
+});
+it("offers clearing combined filters on an empty category search without losing the keyword", () => {
+ render(<GalleryPage {...props} items={[]} hasMore={false} query="cat" activeCategory="portrait" activeModel="FLUX" activeSort="hot" />);
+ expect(screen.getByRole("link", {name:"clearFilters"})).toHaveAttribute("href", "/?q=cat");
+});

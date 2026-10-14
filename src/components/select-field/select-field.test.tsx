@@ -70,3 +70,11 @@ it.each([["category=portrait&models=FLUX&sort=latest", "/?category=portrait&mode
   await user.click(await screen.findByRole("option", { name: "Recommended" }));
   expect(push).toHaveBeenCalledWith(expected);
 });
+
+it("resets pagination while retaining keyword, category and ordering when filtering models", async () => {
+ params.value = "q=cat&category=wallpaper&sort=hot&page=3";
+ render(<SelectField label="Models" name="models" defaultValue="all" options={[{label:"All",value:"all"},{label:"FLUX",value:"FLUX"}]} />);
+ await userEvent.click(screen.getByRole("combobox", {name: "Models"}));
+ await userEvent.click(await screen.findByRole("option", {name: "FLUX"}));
+ expect(push).toHaveBeenCalledWith("/?q=cat&category=wallpaper&sort=hot&models=FLUX");
+});

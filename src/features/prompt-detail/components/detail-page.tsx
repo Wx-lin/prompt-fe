@@ -14,6 +14,7 @@ import styles from "./detail-page.module.css";
 
 export function DetailPage({ prompt, recommendations = [] }: { prompt: PromptDetail | GalleryCard; recommendations?: GalleryCard[] }) {
   useScrollLock();
+  const tCategories = useTranslations("categories");
   const t = useTranslations("detail");
   const router = useRouter();
   const [copied, setCopied] = useState(false);
@@ -167,7 +168,7 @@ export function DetailPage({ prompt, recommendations = [] }: { prompt: PromptDet
         <section className={styles.details}>
           <AuthorSource authorName={prompt.author_name} authorAvatarUrl={"author_avatar_url" in prompt ? prompt.author_avatar_url : null} sourceUrl={"source_url" in prompt ? prompt.source_url : null} />
           <h1>{prompt.title}</h1>
-          <div className={styles.tags}><span>{prompt.category}</span>{prompt.models.map((model) => <span key={model}>{model}</span>)}</div>
+          <div className={styles.tags}><span>{tCategories.has(prompt.category) ? tCategories(prompt.category) : prompt.category}</span>{prompt.models.map((model) => <span key={model}>{model}</span>)}</div>
           <section className={styles.promptSection}>
             <h2>{t("prompt")} <small>{t("promptEnglish")}</small></h2>
             <p>{promptText || t("promptEmpty")}</p>
