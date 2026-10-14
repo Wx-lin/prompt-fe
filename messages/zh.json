@@ -88,6 +88,7 @@
     "clearSearch": "清除搜索 ×",
     "clearSearchAriaLabel": "清除搜索",
     "loadingMore": "加载更多中…",
+    "loading": "内容加载中…",
     "noMoreItems": "已经到底啦",
     "loadMoreError": "加载失败，请重试",
     "retryLoadMore": "重新加载",

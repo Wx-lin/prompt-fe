@@ -8,6 +8,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import type { GalleryCard } from "@/types/prompt";
 import { isOverlongImage } from "@/features/gallery/lib/image-visibility";
 import styles from "./prompt-card.module.css";
+import skeletonStyles from "./gallery-skeleton.module.css";
 
 interface PromptCardProps {
   prompt: GalleryCard;
@@ -34,6 +35,8 @@ export function PromptCard({ prompt, previewHover = false, onOverlongImage }: Pr
   // fixed box.
   const initialRatio = prompt.imageWidth && prompt.imageHeight ? prompt.imageWidth / prompt.imageHeight : defaultAspectRatio;
   const [aspectRatio, setAspectRatio] = useState(initialRatio);
+  const [settledImage, setSettledImage] = useState<string | null>(null);
+  const imageLoading = Boolean(prompt.image) && settledImage !== prompt.image;
   const detailHref = `/prompt/${prompt.id}`;
 
   // 卡片上展示分类而不是模型标签（models 对普通浏览用户没有筛选价值，分类才是
@@ -85,6 +88,7 @@ export function PromptCard({ prompt, previewHover = false, onOverlongImage }: Pr
     <article className={`${styles.card} ${previewHover ? styles.previewHover : ""}`}>
       <div className={styles.artworkFrame} style={{ aspectRatio }}>
         <Link className={styles.artworkLink} href={detailHref} aria-label={t("viewAriaLabel", { title: prompt.title })}>
+          {imageLoading && <div className={`${skeletonStyles.image} ${skeletonStyles.imagePlaceholder}`} aria-hidden="true" data-testid="gallery-image-skeleton" />}
           {prompt.image ? (
             <Image
               className={styles.artwork}
@@ -94,6 +98,7 @@ export function PromptCard({ prompt, previewHover = false, onOverlongImage }: Pr
               sizes="(max-width: 680px) 48vw, (max-width: 1060px) 31vw, 19vw"
               unoptimized={prompt.image.startsWith("/demo/") || prompt.image.startsWith("http")}
               onLoad={(event) => {
+                setSettledImage(prompt.image);
                 const { naturalWidth, naturalHeight } = event.currentTarget;
                 if (isOverlongImage(naturalWidth, naturalHeight)) {
                   onOverlongImage?.(prompt.image);
@@ -101,6 +106,7 @@ export function PromptCard({ prompt, previewHover = false, onOverlongImage }: Pr
                 }
                 if (naturalWidth > 0 && naturalHeight > 0) setAspectRatio(naturalWidth / naturalHeight);
               }}
+              onError={() => setSettledImage(prompt.image)}
             />
           ) : (
             <div className={styles.missingImage} role="img" aria-label={t("imageUnavailable", { title: prompt.title })} />

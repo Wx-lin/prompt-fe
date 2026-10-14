@@ -26,6 +26,34 @@ function card(id: string, width = 300, height = 400): GalleryCard {
 }
 
 describe("gallery long-image filtering", () => {
+  it("keeps an image placeholder until load or failure and resets it for replacement images", () => {
+    const { rerender } = render(<GalleryGrid items={[card("cover")]} />);
+    expect(screen.getAllByTestId("gallery-image-skeleton")).toHaveLength(2);
+    for (const image of screen.getAllByAltText("cover")) fireEvent.load(image);
+    expect(screen.queryAllByTestId("gallery-image-skeleton")).toHaveLength(0);
+    rerender(<GalleryGrid items={[{ ...card("cover"), image: "https://example.com/replacement.jpg" }]} />);
+    expect(screen.getAllByTestId("gallery-image-skeleton")).toHaveLength(2);
+    for (const image of screen.getAllByAltText("cover")) fireEvent.error(image);
+    expect(screen.queryAllByTestId("gallery-image-skeleton")).toHaveLength(0);
+  });
+  it("shows placeholders rather than an empty result while the next page loads after filtering", () => {
+    render(<GalleryGrid items={[card("long", 300, 1200)]} loadingMore />);
+    expect(screen.queryByText("emptyDefault")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("gallery-skeleton-card")).toHaveLength(7);
+  });
+  it("appends loading placeholders without replacing existing cards and clears them after loading", () => {
+    const sentinel = { current: null as HTMLDivElement | null };
+    const { rerender } = render(<GalleryGrid items={[card("existing")]} sentinelRef={sentinel} loadingMore />);
+    expect(screen.getAllByAltText("existing")).toHaveLength(2);
+    expect(screen.getAllByTestId("gallery-skeleton-card")).toHaveLength(7);
+    expect(screen.getByTestId("gallery-grid")).toHaveAttribute("aria-busy", "true");
+    const originalSentinel = sentinel.current;
+    rerender(<GalleryGrid items={[card("existing"), card("new")]} sentinelRef={sentinel} />);
+    expect(screen.queryAllByTestId("gallery-skeleton-card")).toHaveLength(0);
+    expect(screen.getAllByAltText("new")).toHaveLength(2);
+    expect(sentinel.current).toBe(originalSentinel);
+    expect(screen.getByTestId("gallery-grid")).toHaveAttribute("aria-busy", "false");
+  });
   it("filters known images over 3:1 while retaining the boundary and normal images", () => {
     render(<GalleryGrid items={[card("long", 300, 901), card("boundary", 300, 900), card("normal")]} />);
     expect(screen.queryAllByAltText("long")).toHaveLength(0);

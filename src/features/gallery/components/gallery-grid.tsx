@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useState, type Ref } from "react";
 import { PromptCard } from "@/features/gallery/components/prompt-card";
+import { GallerySkeletonCard } from "./gallery-skeleton";
 import { distributeItems } from "@/features/gallery/lib/distribute-items";
 import { isOverlongImage } from "@/features/gallery/lib/image-visibility";
 import type { GalleryCard } from "@/types/prompt";
@@ -34,22 +35,24 @@ export function GalleryGrid({ items, emptyMessage, sentinelRef, loadingMore = fa
 
   return (
     <>
-      {visibleItems.length === 0 && (
+      {visibleItems.length === 0 && !loadingMore && (
         <div className={styles.emptyState} role="status">
           <span className={styles.emptyMark} aria-hidden="true">✳</span>
           <p>{emptyMessage ?? t("emptyDefault")}</p>
         </div>
       )}
-      {visibleItems.length > 0 && (
+      {(visibleItems.length > 0 || loadingMore) && (
         <>
-          <div className={styles.desktopGrid} aria-label={t("waterfallAriaLabel")} data-testid="gallery-grid" data-layout="desktop">
+          <div className={styles.desktopGrid} aria-label={t("waterfallAriaLabel")} aria-busy={loadingMore} data-testid="gallery-grid" data-layout="desktop">
             {desktopColumns.map((column, columnIndex) => <div className={styles.column} key={`desktop-${columnIndex}`}>
               {column.map((item) => <PromptCard key={item.id} prompt={item} onOverlongImage={hideOverlongImage} previewHover={item.id.endsWith("0001")} />)}
+              {loadingMore && <GallerySkeletonCard index={columnIndex} />}
             </div>)}
           </div>
-          <div className={styles.mobileGrid} aria-label={t("waterfallAriaLabel")} data-layout="mobile">
+          <div className={styles.mobileGrid} aria-label={t("waterfallAriaLabel")} aria-busy={loadingMore} data-layout="mobile">
             {mobileColumns.map((column, columnIndex) => <div className={styles.column} key={`mobile-${columnIndex}`}>
               {column.map((item) => <PromptCard key={item.id} prompt={item} onOverlongImage={hideOverlongImage} previewHover={item.id.endsWith("0001")} />)}
+              {loadingMore && <GallerySkeletonCard index={columnIndex} />}
             </div>)}
           </div>
         </>

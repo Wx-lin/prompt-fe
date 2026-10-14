@@ -88,6 +88,7 @@
     "clearSearch": "Clear search ×",
     "clearSearchAriaLabel": "Clear search",
     "loadingMore": "Loading more…",
+    "loading": "Loading prompts…",
     "noMoreItems": "You've reached the end",
     "loadMoreError": "Unable to load more. Please try again.",
     "retryLoadMore": "Retry loading",

@@ -1,4 +1,6 @@
 import { setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
+import { GalleryLoading } from "@/features/gallery/components/gallery-skeleton";
 import { GalleryPage } from "@/features/gallery/components/gallery-page";
 import { demoPrompts } from "@/features/gallery/data/demo-prompts";
 import { sortGalleryItems } from "@/features/gallery/lib/sort-items";
@@ -21,6 +23,14 @@ export default async function Home({ params, searchParams }: { params: RoutePara
   const { locale } = await params;
   setRequestLocale(locale);
   const resolvedSearchParams = await searchParams;
+  return (
+    <Suspense key={`${locale}:${JSON.stringify(resolvedSearchParams)}`} fallback={<GalleryLoading />}>
+      <HomeContent resolvedSearchParams={resolvedSearchParams} />
+    </Suspense>
+  );
+}
+
+async function HomeContent({ resolvedSearchParams }: { resolvedSearchParams: Awaited<SearchParameters> }) {
   const activeCategory = firstValue(resolvedSearchParams.category) ?? "all";
   const activeModel = firstValue(resolvedSearchParams.models) ?? "all";
   const query = (firstValue(resolvedSearchParams.q) ?? "").trim();
