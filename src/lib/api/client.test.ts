@@ -101,6 +101,25 @@ describe("existing API request contracts", () => {
     expect(new URL(fetchMock.mock.calls[2][0]).searchParams.has("models")).toBe(false);
   });
 
+  it("stops returning a withdrawn prompt after a previously successful anonymous read", async () => {
+    let published = true;
+    let cached: unknown;
+    const fetchMock = vi.fn(async (_url: string, options: RequestInit) => {
+      if (options.cache !== "no-store" && cached) return Response.json(cached);
+      if (!published) return new Response(null, { status: 404 });
+      cached = { ...prompt(1), prompt_text: "完整提示词", images: [] };
+      return Response.json(cached);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    expect((await getPromptDetail("1")).id).toBe("1");
+    published = false;
+    await expect(getPromptDetail("1")).rejects.toThrow("API request failed (404)");
+    for (const [, options] of fetchMock.mock.calls) {
+      expect(options.cache).toBe("no-store");
+      expect(options).not.toHaveProperty("next");
+    }
+  });
+
   it("encodes detail IDs as a single URL segment", async () => {
     const fetchMock = mockSearchApi([]);
     await getPromptDetail("id/with space");

@@ -8,12 +8,12 @@ function getApiBaseUrl(): string {
   return (process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? defaultApiBaseUrl).replace(/\/$/, "");
 }
 
-async function request<T>(path: string, accessToken?: string): Promise<T> {
+async function request<T>(path: string, accessToken?: string, fresh = false): Promise<T> {
   const headers: HeadersInit = { Accept: "application/json" };
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
-    // Personalized (token-bearing) requests must never be cached/shared across users.
-    ...(accessToken ? { cache: "no-store" } : { next: { revalidate: 60 } }),
+    // Personalized data and publication-sensitive details must bypass persistent caches.
+    ...(accessToken || fresh ? { cache: "no-store" } : { next: { revalidate: 60 } }),
     headers,
     signal: AbortSignal.timeout(12000),
   });
@@ -63,7 +63,7 @@ export async function getModels(): Promise<ModelOption[]> {
 }
 
 export async function getPromptDetail(id: string, accessToken?: string): Promise<PromptDetail> {
-  return request<PromptDetail>(`/api/prompts/${encodeURIComponent(id)}`, accessToken);
+  return request<PromptDetail>(`/api/prompts/${encodeURIComponent(id)}`, accessToken, true);
 }
 
 export async function getSimilarPrompts(id: string): Promise<PromptListItem[]> {
