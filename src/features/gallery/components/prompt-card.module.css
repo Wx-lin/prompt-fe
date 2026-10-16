@@ -66,12 +66,13 @@
   place-items: center;
   border: 0;
   border-radius: 50%;
-  background: var(--color-favorite);
-  color: #171717;
+  background: transparent;
+  color: #fff;
   cursor: pointer;
 }
 
 .bookmark:disabled { cursor: default; opacity: 0.7; }
+.bookmark.bookmarked { color: var(--color-favorite); }
 .bookmark.bookmarked svg { fill: currentColor; }
 
 .cardAuthor {

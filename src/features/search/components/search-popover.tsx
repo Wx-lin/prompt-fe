@@ -38,11 +38,17 @@ export function SearchPopover({ query: initialQuery, filters, inputRef: external
   const inputRef = externalInputRef ?? ownInputRef;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(initialQuery);
+  const [previousQuery, setPreviousQuery] = useState(initialQuery);
+  if (previousQuery !== initialQuery) {
+    setPreviousQuery(initialQuery);
+    setQuery(initialQuery);
+  }
   const recentSearches = useSyncExternalStore(subscribeToRecentSearches, readRecentSearches, noRecentSearches);
   const trendingTerms = tSearch.raw("trendingTerms") as string[];
 
   function resultsHref(value: string) {
     const params = new URLSearchParams(filters);
+    params.delete("q");
     if (value.trim()) params.set("q", value.trim());
     return params.size ? `/?${params}` : "/";
   }
@@ -84,7 +90,12 @@ export function SearchPopover({ query: initialQuery, filters, inputRef: external
             type="button"
             className={styles.clear}
             aria-label={t("clearSearchAriaLabel")}
-            onClick={() => { setQuery(""); inputRef.current?.focus(); }}
+            onClick={() => {
+              setQuery("");
+              setOpen(false);
+              inputRef.current?.blur();
+              if (initialQuery) router.push(resultsHref(""));
+            }}
           >
             ×
           </button>
