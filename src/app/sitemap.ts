@@ -1,37 +1,31 @@
 import type { MetadataRoute } from "next";
-import { getPromptFeed } from "@/lib/api/client";
-import { defaultLocale, locales } from "@/i18n/routing";
+import { getCategories, getPromptFeed } from "@/lib/api/client";
+import { locales } from "@/i18n/routing";
+import { isCurrentCategory } from "@/features/gallery/data/categories";
+import { languageAlternates, localizedPath, siteUrl } from "@/lib/seo/metadata";
 
-/** Default locale is served unprefixed at "/" (localePrefix: "as-needed"); only
- * non-default locales carry an explicit "/{locale}" path segment. */
-function localizedPath(locale: string, path: string): string {
-  return locale === defaultLocale ? path || "/" : `/${locale}${path}`;
-}
-
+// Generate against live availability, never persist a homepage-only fallback after an outage.
+export const dynamic = "force-dynamic";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-  const urls: MetadataRoute.Sitemap = locales.map((locale) => ({
-    url: `${siteUrl}${localizedPath(locale, "")}`,
-    changeFrequency: "daily",
-    priority: 1,
-    alternates: { languages: Object.fromEntries(locales.map((l) => [l, `${siteUrl}${localizedPath(l, "")}`])) },
-  }));
-  try {
-    for (let page = 1; page <= 5; page += 1) {
-      const feed = await getPromptFeed({ page, pageSize: 50 });
-      for (const item of feed.items) {
-        urls.push(...locales.map((locale) => ({
-          url: `${siteUrl}${localizedPath(locale, `/prompt/${item.id}`)}`,
-          lastModified: new Date(item.created_at),
-          changeFrequency: "weekly" as const,
-          priority: 0.7,
-          alternates: { languages: Object.fromEntries(locales.map((l) => [l, `${siteUrl}${localizedPath(l, `/prompt/${item.id}`)}`])) },
-        })));
-      }
-      if (!feed.has_more) break;
+  const base = siteUrl();
+  function entries(path: string, lastModified?: Date): MetadataRoute.Sitemap {
+    return locales.map(locale => ({ url: `${base}${localizedPath(locale, path)}`, ...(lastModified && !Number.isNaN(lastModified.getTime()) ? { lastModified } : {}), alternates: { languages: Object.fromEntries(Object.entries(languageAlternates(path)).map(([language, url]) => [language, `${base}${url}`])) } }));
+  }
+  const categories = await getCategories();
+  const urls = [...entries(""), ...categories.filter(category => category.count > 0 && isCurrentCategory(category.key)).flatMap(category => entries(`/category/${category.key}`))];
+  const seen = new Set<string>();
+  for (let page = 1; ; page += 1) {
+    const feed = await getPromptFeed({ page, pageSize: 50, sort: "latest" });
+    const newItems = feed.items.filter(item => !seen.has(item.id));
+    if (!newItems.length && feed.has_more) throw new Error("Sitemap pagination made no progress");
+    for (const item of newItems) {
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      urls.push(...entries(`/prompt/${encodeURIComponent(item.id)}`, new Date(item.created_at)));
     }
-  } catch {
-    // Keep the homepage discoverable even when the backend is temporarily offline.
+    // Fail explicitly rather than publish an invalid/truncated XML once splitting is needed.
+    if (urls.length > 50000) throw new Error("Sitemap exceeds 50000 URLs; split into sitemap index files");
+    if (!feed.has_more) break;
   }
   return urls;
 }

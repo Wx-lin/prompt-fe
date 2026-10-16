@@ -16,7 +16,7 @@ export default defineConfig({
     exclude: ["e2e/**", "node_modules/**", "test-results/**"],
     coverage: {
       provider: "v8",
-      include: ["src/lib/api/client.ts", "src/lib/theme/**/*.ts", "src/features/gallery/lib/**/*.ts", "src/features/search/lib/**/*.ts"],
+      include: ["src/lib/seo/**/*.ts", "src/app/sitemap.ts", "src/lib/api/client.ts", "src/lib/theme/**/*.ts", "src/features/gallery/lib/**/*.ts", "src/features/search/lib/**/*.ts"],
       thresholds: {
         lines: 80,
         functions: 80,

@@ -1,10 +1,10 @@
+import { languageAlternates, localizedPath, serializeJsonLd, siteUrl } from "@/lib/seo/metadata";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { getRecommendations } from "@/features/prompt-detail/lib/recommendations";
 import { DetailPage } from "@/features/prompt-detail/components/detail-page";
 import { demoPrompts } from "@/features/gallery/data/demo-prompts";
-import { defaultLocale } from "@/i18n/routing";
 import { getSessionToken } from "@/lib/auth/session";
 import { getPromptDetail } from "@/lib/api/client";
 import type { GalleryCard, PromptDetail } from "@/types/prompt";
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: RouteParameters }):
   return {
     title: prompt.title,
     description: "prompt_text" in prompt ? prompt.description ?? prompt.prompt_text : prompt.promptText,
-    alternates: { canonical: locale === defaultLocale ? `/prompt/${id}` : `/${locale}/prompt/${id}` },
+    alternates: { canonical: localizedPath(locale, `/prompt/${id}`), languages: languageAlternates(`/prompt/${id}`) },
     openGraph: { title: prompt.title, images: prompt.thumbnail_url ? [prompt.thumbnail_url] : [] },
   };
 }
@@ -41,5 +41,13 @@ export default async function PromptRoute({ params }: { params: RouteParameters 
   const prompt = await loadPrompt(id, token ?? undefined);
   if (!prompt) notFound();
   const recommendations = await getRecommendations(id);
-  return <DetailPage prompt={prompt} recommendations={recommendations} />;
+  const url = `${siteUrl()}${localizedPath(locale, `/prompt/${id}`)}`;
+  const structuredData = {
+    "@context": "https://schema.org", "@type": "CreativeWork",
+    name: prompt.title, url, inLanguage: locale,
+    text: "prompt_text" in prompt ? prompt.prompt_text : prompt.promptText,
+    ...(prompt.thumbnail_url ? { image: prompt.thumbnail_url } : {}),
+    ...(prompt.author_name ? { author: { "@type": "Person", name: prompt.author_name } } : {}),
+  };
+  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }} /><DetailPage prompt={prompt} recommendations={recommendations} /></>;
 }

@@ -118,3 +118,13 @@ UPLOAD_FIXTURE=1 npx playwright test e2e/upload-component.spec.ts --workers=1
 验收：前端 lint/typecheck 与 133 个测试通过；后端真实隔离 PostgreSQL 156 个测试通过无跳过，含迁移升级/降级及并发；后台 lint/build 和主站最终隔离源码 Turbopack build 通过。真实数据库联调桌面/手机 2 个 E2E 验证后台到主站完整顺序、拖拽、分页去重、热门排序、过滤与冲突。COS/Redis/登录用测试替身。
 
 发布顺序：先备份并审阅新迁移 f8b24d0c51e3 → 后端及后台 → 主站；不能在旧后端上提前发布默认 recommended 的前端。旧自动迁移白名单保持不变，实际迁移需要按部署手册处理。本次未提交、未改生产队列。
+
+## 2026-10-16 搜索引擎基础优化
+
+- 首页覆盖 AI 提示词、文生图提示词、AI 绘图提示词、AI 生图提示词，复用画廊摘要样式提供真实可见的 H1 与简介。
+- 复用画廊加载逻辑提供 `/category/{key}` 与中英文 metadata；仅从有公开作品的分类生成目录与发现链接。保持现有查询筛选兼容。
+- `page` 由服务端实际取对应内容，页面自 canonical；保留无限滚动，并提供 HTML 下一页链接。任意搜索、模型及排序查询组合 noindex/follow，避免重复低价值索引。
+- 详情补齐同作品中英文 hreflang、x-default 与安全转义的 CreativeWork JSON-LD，不声明评分、授权或生成能力。
+- sitemap 用 latest 分页读取全部公开作品并去重，取消 250 条限制；上游失败或分页无进展直接失败，不返回不完整的成功 sitemap。达到 50000 URL 需后续拆分索引，当前不静默截断。
+- 默认正式站源为 `https://aigc-prompt.com`。环境变量 `NEXT_PUBLIC_SITE_URL` 可覆盖；新增 `GOOGLE_SITE_VERIFICATION`、`BAIDU_SITE_VERIFICATION`，填写各平台提供的 HTML 验证码值后，由 metadata 输出验证标签。配置变更后重启服务；尚未取得的验证码保持空，不使用本地测试值。
+- 验证网站所有权需用户登录 Google Search Console 与百度搜索资源平台；前端输出验证标签本身不等于已验证或已提交 sitemap，后台曝光/点击/关键词数据仍需授权的数据源。

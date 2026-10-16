@@ -1,7 +1,7 @@
 {
   "metadata": {
     "siteName": "AI Prompt Gallery",
-    "title": "AI Prompt Gallery · Discover inspiration, copy great prompts",
+    "title": "AI Prompt Library | Text-to-Image Prompts",
     "description": "Discover ready-to-use AI image prompts, browse inspiration by style, scene, and model.",
     "ogDescription": "Discover ready-to-use AI image prompts.",
     "loginTitle": "Log in",
@@ -93,7 +93,13 @@
     "loadMoreError": "Unable to load more. Please try again.",
     "retryLoadMore": "Retry loading",
     "categoryAdjusted": "This category has changed. Browse using the new categories.",
-    "clearFilters": "Clear filters"
+    "clearFilters": "Clear filters",
+    "seoHeading": "AI prompt library: text-to-image inspiration",
+    "seoDescription": "Preview images, copy text-to-image prompts and browse ideas by scene and model.",
+    "categoryHeading": "{category} prompts",
+    "categoryLinks": "Prompt categories",
+    "paginationLabel": "Prompt pages",
+    "nextPageLink": "Next page"
   },
   "card": {
     "viewAriaLabel": "View prompt: {title}",

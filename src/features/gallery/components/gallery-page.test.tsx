@@ -65,3 +65,14 @@ it("offers clearing combined filters on an empty category search without losing 
  render(<GalleryPage {...props} items={[]} hasMore={false} query="cat" activeCategory="portrait" activeModel="FLUX" activeSort="hot" />);
  expect(screen.getByRole("link", {name:"clearFilters"})).toHaveAttribute("href", "/?q=cat");
 });
+it("renders crawlable next-page links while retaining infinite scrolling", () => {
+ render(<GalleryPage {...props} nextPage={4} />);
+ expect(screen.getByRole("link", {name: "nextPageLink"})).toHaveAttribute("href", "/?sort=latest&page=4");
+ expect(screen.getByRole("heading", {level: 1})).toHaveTextContent("seoHeading");
+});
+it("links populated categories and paginates within a category landing", () => {
+ render(<GalleryPage {...props} activeCategory="avatar" landingCategory="avatar" categories={[{key:"avatar",label:"头像",count:2},{key:"poster",label:"海报",count:0}]} />);
+ expect(screen.getByRole("link", {name:"avatar"})).toHaveAttribute("href", "/category/avatar");
+ expect(screen.queryByRole("link", {name:"poster"})).not.toBeInTheDocument();
+ expect(screen.getByRole("link", {name:"nextPageLink"})).toHaveAttribute("href", "/category/avatar?sort=latest&page=2");
+});

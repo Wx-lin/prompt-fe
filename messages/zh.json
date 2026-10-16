@@ -1,8 +1,8 @@
 {
   "metadata": {
     "siteName": "AI 绘图提示词库",
-    "title": "AI 绘图提示词库 · 发现灵感，复制好提示词",
-    "description": "发现可直接使用的 AI 绘图提示词，按风格、场景与模型浏览灵感。",
+    "title": "AI 提示词库｜文生图与 AI 绘图提示词大全",
+    "description": "发现 AI 提示词、文生图提示词和 AI 绘图提示词，查看图片效果并复制，按场景与模型浏览 AI 生图灵感。",
     "ogDescription": "发现可直接使用的 AI 绘图提示词。",
     "loginTitle": "登录",
     "searchTitle": "搜索提示词",
@@ -93,7 +93,13 @@
     "loadMoreError": "加载失败，请重试",
     "retryLoadMore": "重新加载",
     "categoryAdjusted": "此分类已调整，可使用新分类浏览。",
-    "clearFilters": "清除筛选"
+    "clearFilters": "清除筛选",
+    "seoHeading": "AI 提示词库：文生图与 AI 绘图灵感",
+    "seoDescription": "查看图片效果，复制文生图提示词，按场景与模型寻找适合你的 AI 生图灵感。",
+    "categoryHeading": "{category}提示词",
+    "categoryLinks": "按用途浏览提示词",
+    "paginationLabel": "作品分页",
+    "nextPageLink": "下一页作品"
   },
   "card": {
     "viewAriaLabel": "查看提示词：{title}",

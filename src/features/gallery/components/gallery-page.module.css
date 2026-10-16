@@ -10,3 +10,7 @@
   .demoNotice { padding: 7px 16px 2px; font-size: 10px; }
   .searchSummary { padding: 4px 16px 16px; }
 }
+
+.searchSummary p { width: 100%; margin: 0; color: var(--color-text-muted); font-size: 13px; line-height: 1.6; }
+.categoryLinks { display: flex; flex-wrap: wrap; gap: 10px 16px; }
+.categoryLinks a { margin-left: 0; }

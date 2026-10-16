@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const t = await getTranslations({ locale, namespace: "metadata" });
 
   return {
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://aigc-prompt.com"),
     title: { default: t("title"), template: `%s | ${t("siteName")}` },
     description: t("description"),
     alternates: {
@@ -39,6 +39,10 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       siteName: t("siteName"),
       title: t("siteName"),
       description: t("ogDescription"),
+    },
+    verification: {
+      ...(process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : {}),
+      ...(process.env.BAIDU_SITE_VERIFICATION ? { other: { "baidu-site-verification": process.env.BAIDU_SITE_VERIFICATION } } : {}),
     },
     robots: { index: true, follow: true },
   };

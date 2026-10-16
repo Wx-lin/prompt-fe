@@ -7,11 +7,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SiteHeader } from "@/features/gallery/components/site-header";
 import { GalleryGrid } from "@/features/gallery/components/gallery-grid";
 import { Link } from "@/i18n/navigation";
-import { legacyCategoryKeys } from "@/features/gallery/data/categories";
+import { isCurrentCategory, legacyCategoryKeys } from "@/features/gallery/data/categories";
 import type { Category, CurrentUser, GalleryCard, PromptListItem, PromptListResponse } from "@/types/prompt";
 import styles from "./gallery-page.module.css";
 
 interface GalleryPageProps {
+  landingCategory?: string;
   items: GalleryCard[];
   categories: Category[];
   activeCategory: string;
@@ -31,6 +32,7 @@ function toGalleryCard(prompt: PromptListItem): GalleryCard {
 
 export function GalleryPage({
   items,
+  landingCategory,
   categories,
   activeCategory,
   activeSort,
@@ -43,6 +45,7 @@ export function GalleryPage({
   user = null,
 }: GalleryPageProps) {
   const t = useTranslations("gallery");
+  const tCategories = useTranslations("categories");
   const [loadedItems, setLoadedItems] = useState(items);
   const [page, setPage] = useState(nextPage);
   const [canLoadMore, setCanLoadMore] = useState(hasMore);
@@ -67,6 +70,10 @@ export function GalleryPage({
   if (activeCategory !== "all") filters.set("category", activeCategory);
   if (activeSort !== "recommended") filters.set("sort", activeSort);
   if (activeModel !== "all") filters.set("models", activeModel);
+  const paginationParams = new URLSearchParams(filters);
+  if (query) paginationParams.set("q", query);
+  paginationParams.set("page", String(page));
+  if (landingCategory) paginationParams.delete("category");
   const clearSearchHref = filters.size ? `/?${filters}` : "/";
 
   const loadNextPage = useCallback(async () => {
@@ -132,6 +139,13 @@ export function GalleryPage({
         user={user}
         showNavigationRow
       />
+      {!query && <section className={styles.searchSummary}>
+        <h1>{activeCategory === "all" ? t("seoHeading") : t("categoryHeading", { category: isCurrentCategory(activeCategory) ? tCategories(activeCategory) : activeCategory })}</h1>
+        <p>{t("seoDescription")}</p>
+        <nav aria-label={t("categoryLinks")} className={styles.categoryLinks}>
+          {categories.filter(category => category.count > 0 && isCurrentCategory(category.key)).map(category => <Link key={category.key} href={`/category/${category.key}`}>{tCategories(category.key)}</Link>)}
+        </nav>
+      </section>}
       {legacyCategoryKeys.includes(activeCategory) && <section className={styles.searchSummary} role="status">{t("categoryAdjusted")}</section>}
       {query && (
         <section className={styles.searchSummary} aria-label={t("searchResultsAriaLabel")}>
@@ -156,6 +170,7 @@ export function GalleryPage({
         loadingMore={loadingMore}
         endOfList={!canLoadMore && loadedItems.length > 0}
       />
+      {canLoadMore && <nav className={styles.searchSummary} aria-label={t("paginationLabel")}><Link href={`${landingCategory ? `/category/${landingCategory}` : "/"}?${paginationParams}`}>{t("nextPageLink")}</Link></nav>}
     </main>
   );
 }

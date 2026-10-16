@@ -66,3 +66,10 @@ it("preserves reference demo composition for recommended while popular sorts by 
   expect(popular.props.items.map((item: {like_count: number}) => item.like_count)).toEqual([...popular.props.items.map((item: {like_count: number}) => item.like_count)].sort((a, b) => b - a));
   expect(recommended.props.items.map((item: {id: string}) => item.id)).not.toEqual(popular.props.items.map((item: {id: string}) => item.id));
 });
+it("renders the requested server page and continues infinite scrolling from it", async () => {
+  vi.stubEnv("NODE_ENV", "production");
+  api.getModels.mockResolvedValue([]);
+  const page = await renderHome({ params: Promise.resolve({ locale: "zh" }), searchParams: Promise.resolve({ page: "3" }) });
+  expect(api.getPromptFeed).toHaveBeenCalledWith(expect.objectContaining({ page: 3 }));
+  expect(page.props.nextPage).toBe(4);
+});
