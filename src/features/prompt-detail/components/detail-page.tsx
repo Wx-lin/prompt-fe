@@ -77,10 +77,8 @@ export function DetailPage({ prompt, recommendations = [] }: { prompt: PromptDet
   }
 
   async function sharePrompt() {
-    const shareData = { title: prompt.title, url: window.location.href };
     try {
-      if (navigator.share) await navigator.share(shareData);
-      else await navigator.clipboard.writeText(shareData.url);
+      await navigator.clipboard.writeText(window.location.href);
       setShared(true);
       window.setTimeout(() => setShared(false), 1600);
     } catch {
