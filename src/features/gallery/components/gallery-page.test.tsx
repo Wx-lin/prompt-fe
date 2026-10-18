@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ComponentProps, Ref } from "react";
 import type { GalleryCard } from "@/types/prompt";
 import { GalleryPage } from "./gallery-page";
+import styles from "./gallery-page.module.css";
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("./site-header", () => ({ SiteHeader: () => null }));
 vi.mock("@/i18n/navigation", () => ({ Link: (props: ComponentProps<"a">) => <a {...props} /> }));
@@ -70,9 +71,11 @@ it("renders crawlable next-page links while retaining infinite scrolling", () =>
  expect(screen.getByRole("link", {name: "nextPageLink"})).toHaveAttribute("href", "/?sort=latest&page=4");
  expect(screen.getByRole("heading", {level: 1})).toHaveTextContent("seoHeading");
 });
-it("links populated categories and paginates within a category landing", () => {
+it("keeps category SEO and pagination without adding a visible intro or duplicate navigation", () => {
  render(<GalleryPage {...props} activeCategory="avatar" landingCategory="avatar" categories={[{key:"avatar",label:"头像",count:2},{key:"poster",label:"海报",count:0}]} />);
- expect(screen.getByRole("link", {name:"avatar"})).toHaveAttribute("href", "/category/avatar");
+ expect(screen.queryByRole("navigation", {name:"categoryLinks"})).not.toBeInTheDocument();
+ expect(screen.queryByText("seoDescription")).not.toBeInTheDocument();
+ expect(screen.getByRole("heading", {level:1})).toHaveClass(styles.pageHeading);
  expect(screen.queryByRole("link", {name:"poster"})).not.toBeInTheDocument();
  expect(screen.getByRole("link", {name:"nextPageLink"})).toHaveAttribute("href", "/category/avatar?sort=latest&page=2");
 });

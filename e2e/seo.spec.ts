@@ -4,7 +4,11 @@ test("SEO metadata and content survive direct requests in both languages", async
   await page.goto("/");
   await expect(page).toHaveTitle(/AI 提示词库.*文生图/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("AI 提示词库");
-  await expect(page.getByRole("navigation", { name: "按用途浏览提示词" }).getByRole("link", {name: "头像"})).toHaveAttribute("href", "/category/avatar");
+  await expect(page.getByRole("navigation", { name: "按用途浏览提示词" })).toHaveCount(0);
+  await expect(page.getByText("查看图片效果，复制文生图提示词，按场景与模型寻找适合你的 AI 生图灵感。", {exact: true})).toHaveCount(0);
+  const headingBox = await page.getByRole("heading", {level: 1}).boundingBox();
+  expect(headingBox?.width).toBeLessThanOrEqual(1);
+  expect(headingBox?.height).toBeLessThanOrEqual(1);
   for (const colorScheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme });
     const size = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);

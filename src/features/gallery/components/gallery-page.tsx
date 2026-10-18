@@ -139,13 +139,7 @@ export function GalleryPage({
         user={user}
         showNavigationRow
       />
-      {!query && <section className={styles.searchSummary}>
-        <h1>{activeCategory === "all" ? t("seoHeading") : t("categoryHeading", { category: isCurrentCategory(activeCategory) ? tCategories(activeCategory) : activeCategory })}</h1>
-        <p>{t("seoDescription")}</p>
-        <nav aria-label={t("categoryLinks")} className={styles.categoryLinks}>
-          {categories.filter(category => category.count > 0 && isCurrentCategory(category.key)).map(category => <Link key={category.key} href={`/category/${category.key}`}>{tCategories(category.key)}</Link>)}
-        </nav>
-      </section>}
+      {!query && <h1 className={styles.pageHeading}>{activeCategory === "all" ? t("seoHeading") : t("categoryHeading", { category: isCurrentCategory(activeCategory) ? tCategories(activeCategory) : activeCategory })}</h1>}
       {legacyCategoryKeys.includes(activeCategory) && <section className={styles.searchSummary} role="status">{t("categoryAdjusted")}</section>}
       {query && (
         <section className={styles.searchSummary} aria-label={t("searchResultsAriaLabel")}>
