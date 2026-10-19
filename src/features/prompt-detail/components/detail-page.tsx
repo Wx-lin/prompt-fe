@@ -35,6 +35,8 @@ export function DetailPage({ prompt, recommendations = [] }: { prompt: PromptDet
   const images = "images" in prompt ? prompt.images : [];
   const imageCount = images.length > 0 ? images.length : 1;
   const image = images.length > 0 ? images[imageIndex]?.image_url ?? "" : "image" in prompt ? prompt.image : prompt.thumbnail_url ?? "";
+  // Suppress the legacy import notice without discarding actual author notes.
+  const description = ("description" in prompt ? prompt.description : "")?.replace("采集收录，未经本平台逐条出图验证；原文与效果图来自所标注来源。提示词已整理为中文。", "").trim();
   const promptText = "prompt_text" in prompt ? prompt.prompt_text : prompt.promptText ?? "";
 
   function closeDetail(event?: MouseEvent<HTMLAnchorElement>) {
@@ -170,7 +172,7 @@ export function DetailPage({ prompt, recommendations = [] }: { prompt: PromptDet
           <section className={styles.promptSection}>
             <h2>{t("prompt")} <small>{t("promptEnglish")}</small></h2>
             <p>{promptText || t("promptEmpty")}</p>
-            {"description" in prompt && prompt.description && <p className={styles.description}>{prompt.description}</p>}
+            {description && <p className={styles.description}>{description}</p>}
           </section>
           <button className={styles.copy} type="button" onClick={copyPrompt} data-testid="prompt-copy"><Icon name="copy" size={18} />{copied ? t("promptCopied") : t("copyPrompt")}</button>
           <div className={styles.engagement}>

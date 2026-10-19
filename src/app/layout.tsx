@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { getLocale } from "next-intl/server";
 import { ThemeProvider } from "@/components/theme-provider/theme-provider";
 import { getThemeBootstrapScript } from "@/lib/theme/theme";
+import { VisitTracker } from "@/components/visit-tracker/visit-tracker";
 import "./globals.css";
 
 /**
@@ -18,7 +19,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <script dangerouslySetInnerHTML={{ __html: getThemeBootstrapScript() }} />
       </head>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>{children}<VisitTracker /></ThemeProvider>
       </body>
     </html>
   );

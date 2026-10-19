@@ -21,3 +21,12 @@ it("copies the current URL even when native sharing is supported", async () => {
   expect(share).not.toHaveBeenCalled();
   expect(await screen.findByRole("button", { name: "shared" })).toBeInTheDocument();
 });
+
+it("omits the imported collection notice while preserving useful descriptions", () => {
+  const notice = "采集收录，未经本平台逐条出图验证；原文与效果图来自所标注来源。提示词已整理为中文。";
+  const view = render(<DetailPage prompt={{ ...prompt, description: notice }} />);
+  expect(screen.queryByText(notice)).not.toBeInTheDocument();
+  view.rerender(<DetailPage prompt={{ ...prompt, description: "建议使用 3:4 画幅。" + notice }} />);
+  expect(screen.getByText("建议使用 3:4 画幅。")).toBeInTheDocument();
+  expect(screen.queryByText(/采集收录/)).not.toBeInTheDocument();
+});

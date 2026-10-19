@@ -298,3 +298,16 @@
 - 按用户要求移除 SEO 新增的可见介绍段落和重复分类链接，导航后直接显示画廊；首页与分类 H1 保留辅助阅读语义，不占布局空间。
 - metadata、canonical、hreflang、详情 JSON-LD、分类落地页、sitemap、robots、站长验证和分页链接保留；分类发现由 sitemap 与原有导航承担。AGENT.md 明确 SEO 不得未经确认改变布局。
 - 回归测试先确认旧代码仍显示重复导航而失败，修复后全量 181 测试、lint、typecheck、production build、diff 检查通过；本地无数据库 fixture 的桌面/手机 SEO E2E 2 项通过，覆盖深浅主题及分页、分类 canonical、搜索 noindex、sitemap 和详情结构化数据。已查看桌面截图；独立审查无阻塞问题。尚未提交或部署。
+
+## 2026-10-18 移除详情采集统一说明
+
+- 详情页不再显示“采集收录，未经本平台逐条出图验证；原文与效果图来自所标注来源。提示词已整理为中文。”这段导入说明。仅过滤这段固定文本，保留作者实际说明、提示词和来源入口，不修改数据库。
+- 组件回归测试先 RED 再 GREEN，覆盖纯说明隐藏及混合说明保留；2 项相关测试、lint、typecheck、diff 检查通过。尚未提交部署，未进行线上验收。
+
+## 2026-10-19 匿名浏览器访客统计（本地实现，未部署）
+
+- 根布局挂载不可见 VisitTracker：页面进入、路由切换、恢复可见/BFCache 时同源空体上报；30 分钟内同路径抑制重复，跨北京时间自然日重新上报，过滤常见 crawler。无新增视觉、依赖或本地存储，不上传路径、referrer、邮箱或登录标识。
+- 新增 `/api/analytics/visit` BFF：校验浏览器 Host/Origin 与 Fetch-Site，流式限制请求体 64 字节且拒绝非空体；读取/生成独立 UUID 第一方 HttpOnly Cookie（Lax、生产 Secure、365 天），仅将 SHA256 hash 发往内部后端，3 秒超时和 no-store。上游失败返回通用 503，仍保留稳定 Cookie，不影响登录 Cookie 或页面。
+- 核心文件：`src/app/api/analytics/visit/route.ts`、`src/lib/analytics/identity.ts`、`src/components/visit-tracker/visit-tracker.tsx`、`src/app/layout.tsx`；没有现有隐私政策页面可补充，未擅自新增可见页面。
+- TDD：新路由/组件测试先因缺少实现 RED，再 GREEN；8 项专项测试覆盖来源/请求体、hash/私密 Cookie、上游失败、StrictMode 去重、事件清理和北京午夜。新模块覆盖率语句96.42%、分支91.66%、函数100%、行97.87%；全量190测试、lint、typecheck、production build、diff检查通过。浏览器联调由父任务追加；未提交、推送或修改生产。
+- 安全审阅补充：首个 Cookie 响应完成前抑制重叠请求，防止快速切路由生成两个标识；浏览器请求设置 `referrerPolicy: no-referrer`。新增并发回归后专项 9 测试、typecheck、相关 ESLint 通过；最终专项覆盖率语句96.61%、分支92.1%、函数100%、行97.95%。完整 build/190 测试结果为此补充前执行，父任务负责最终集成浏览器及全量复验。
