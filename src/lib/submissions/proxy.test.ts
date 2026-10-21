@@ -2,6 +2,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { POST, GET } from "@/app/api/submissions/route";
 import { POST as upload } from "@/app/api/submissions/upload/route";
+import { fallbackCategories, legacyCategoryKeys } from "@/features/gallery/data/categories";
 vi.mock("@/lib/auth/session", () => ({ getSessionToken: vi.fn(async () => "secret-session") }));
 import { getSessionToken } from "@/lib/auth/session";
 
@@ -13,6 +14,32 @@ const request = (body: unknown, origin = "http://localhost") => new Request("htt
   method: "POST",
   headers: { origin, "content-type": "application/json" },
   body: JSON.stringify(body)
+});
+
+const submission = {
+  title: "假如你家毛孩子也要上班",
+  prompt_text: "一只正在花店工作的猫咪",
+  description: "",
+  models: ["GPT Image 2.0"],
+  upload_ids: ["00000000-0000-4000-8000-000000000001"]
+};
+
+it.each(fallbackCategories)("forwards submissions in the current $key category", async ({ key }) => {
+  const body = { ...submission, category: key };
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ id: "work-1" }, { status: 201 }));
+  vi.stubGlobal("fetch", fetcher);
+
+  expect((await POST(request(body))).status).toBe(201);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher.mock.calls[0][1]).toMatchObject({ body: JSON.stringify(body) });
+});
+
+it.each([...legacyCategoryKeys, "all", "unknown"])("rejects the non-current %s category before forwarding", async (category) => {
+  const fetcher = vi.fn();
+  vi.stubGlobal("fetch", fetcher);
+
+  expect((await POST(request({ ...submission, category }))).status).toBe(400);
+  expect(fetcher).not.toHaveBeenCalled();
 });
 
 it("rejects missing or cross-site origin before upstream calls", async () => {

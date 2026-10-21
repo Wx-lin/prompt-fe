@@ -311,3 +311,11 @@
 - 核心文件：`src/app/api/analytics/visit/route.ts`、`src/lib/analytics/identity.ts`、`src/components/visit-tracker/visit-tracker.tsx`、`src/app/layout.tsx`；没有现有隐私政策页面可补充，未擅自新增可见页面。
 - TDD：新路由/组件测试先因缺少实现 RED，再 GREEN；8 项专项测试覆盖来源/请求体、hash/私密 Cookie、上游失败、StrictMode 去重、事件清理和北京午夜。新模块覆盖率语句96.42%、分支91.66%、函数100%、行97.87%；全量190测试、lint、typecheck、production build、diff检查通过。浏览器联调由父任务追加；未提交、推送或修改生产。
 - 安全审阅补充：首个 Cookie 响应完成前抑制重叠请求，防止快速切路由生成两个标识；浏览器请求设置 `referrerPolicy: no-referrer`。新增并发回归后专项 9 测试、typecheck、相关 ESLint 通过；最终专项覆盖率语句96.61%、分支92.1%、函数100%、行97.95%。完整 build/190 测试结果为此补充前执行，父任务负责最终集成浏览器及全量复验。
+
+## 2026-10-21 投稿分类校验修复（本地完成，未部署）
+
+- “表情包与贴纸”等 7 个现行分类被投稿 BFF 的旧 8 分类白名单误拦，`POST /api/submissions` 在转发后端前返回 400，表单统一显示“提交失败”。模型 `GPT Image 2.0` 与图片上传不受此次缺陷影响。
+- `src/lib/submissions/validation.ts` 复用发布表单已有的 `isCurrentCategory()`，统一接受当前 12 分类、拒绝旧分类和非字符串值，移除重复白名单。
+- TDD：分类单元及真实 POST handler 回归先出现 21 项预期失败，修复后专项 66 项全部通过，校验模块语句/分支/函数/行覆盖率均 100%；全量 249 项测试通过，默认覆盖率语句 93.75%、分支 91.72%、函数 95.55%、行 95.72%。lint、typecheck、生产构建和独立代码/安全审查通过。
+- 生产构建连接本机隔离 PostgreSQL fixture，桌面/手机 2 项 E2E 通过：上传→选择表情包与贴纸→提交→核对落库 `category=sticker`→待审不可公开→测试管理员批准→公开详情可读。COS、Redis、会话使用测试替身，不代表生产账户/COS 验收；未提交、推送或部署。
+- 本机 Next 16.4 会将 `127.0.0.1` 归一化为 `localhost`，直接以 `--hostname 127.0.0.1` 启动会让默认中文 rewrite 变成外部请求并循环跳转。测试服务使用 `NODE_OPTIONS=--dns-result-order=ipv4first`，配合 `npm run start -- --hostname localhost --port 3110`；Playwright 继续使用 `http://127.0.0.1:3110`。无需改动产品路由。

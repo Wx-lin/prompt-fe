@@ -13,7 +13,7 @@ test("upload, submit, admin approve, and public detail share one real database",
   await page.getByLabel("作品标题").fill(title);
   await page.getByLabel("提示词", { exact: true }).fill("a pink abstract square");
   await page.getByRole("combobox", { name: "作品分类", exact: true }).click();
-  await page.getByRole("option", { name: "人像写真", exact: true }).click();
+  await page.getByRole("option", { name: "表情包与贴纸", exact: true }).click();
   await page.getByRole("combobox", { name: "模型版本", exact: true }).click();
   await page.getByRole("option", { name: "Midjourney V6", exact: true }).click();
   await page.getByRole("button", { name: "提交审核", exact: true }).click();
@@ -23,6 +23,7 @@ test("upload, submit, admin approve, and public detail share one real database",
   await expect(work).toContainText("待审核");
   const listed = await request.get(`${backend}/api/submissions`, { headers: { Authorization: "Bearer test-session" } });
   const item = (await listed.json()).items.find((item: {title: string}) => item.title === title);
+  expect(item.category).toBe("sticker");
   expect((await request.get(`${backend}/api/prompts/${item.id}`)).status()).toBe(404);
   const original = item.image_urls[0].split("?")[0];
   expect((await request.get(original)).status()).toBe(404);
