@@ -40,7 +40,7 @@ declare global {
   }
 }
 
-export function LoginPage() {
+export function LoginPage({ onAuthenticated, onClose }: { onAuthenticated?: () => void | Promise<void>; onClose?: () => void } = {}) {
   useScrollLock();
   const t = useTranslations("login");
   const router = useRouter();
@@ -52,6 +52,18 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const completeLogin = useCallback(async () => {
+    if (!mounted.current) return;
+    if (onAuthenticated) {
+      try { await onAuthenticated(); }
+      catch { throw new Error(t("loginFailed")); }
+      return;
+    }
+    router.push(returnTo);
+    router.refresh();
+  }, [onAuthenticated, router, returnTo, t]);
 
   const handleGoogleCredential = useCallback(
     async (response: { credential: string }) => {
@@ -72,15 +84,14 @@ export function LoginPage() {
           setMessage(msg);
           return;
         }
-        router.push(returnTo);
-        router.refresh();
+        await completeLogin();
       } catch {
         setMessage(t("loginFailed"));
       } finally {
         setBusy(false);
       }
     },
-    [router, t, returnTo]
+    [t, completeLogin]
   );
 
   useEffect(() => {
@@ -123,6 +134,7 @@ export function LoginPage() {
 
   function closeLogin(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
+    if (onClose) { onClose(); return; }
     if (window.history.length > 1) router.back();
     else router.push("/");
   }
@@ -150,8 +162,7 @@ export function LoginPage() {
     try {
       const response = await fetch("/api/auth/verify-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, code }) });
       if (!response.ok) throw new Error(t("codeInvalid"));
-      router.push(returnTo);
-      router.refresh();
+      await completeLogin();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t("loginFailed"));
     } finally {

@@ -2,6 +2,18 @@
 
 每完成一个可独立验收的功能，就追加一条记录：目标、实现范围、文件边界、自测命令和实际结果、视觉对照结果、未完成项。不要用计划代替已验证结果。
 
+## 2026-10-22 · 网站图片转提示词（本地完成，未上线）
+
+- 按昨天的网站上传/结果图实现搜索框右侧「反推提示词」入口、原图/结果双栏面板、完整提示词与画面拆解、输出语言、编辑/复制和同面板历史；复用 Base UI、Lucide 和现有黑白主题 token。桌面深浅主题与手机纵向布局已目测核对，未做逐像素差分。视觉源与范围归档在 `docs/reference/ui/image-to-prompt/`、`docs/superpowers/specs/2026-10-22-image-to-prompt-web.md`。
+- 新代码集中在 `src/features/image-to-prompt/`、`src/lib/prompt-analysis/`、`src/types/prompt-analysis.ts` 和三组 Next API 路由。原搜索 Popover 与快捷键保留；`LoginPage` 仅增加可选原位登录回调。选图不调模型；创建网络重试保留幂等键，关闭/重开查询已有任务，切语言/编辑/复制/历史不额外调用模型。
+- 私有数据沿用 HttpOnly 会话、Host/Origin 校验、流式大小上限和 no-store；切换身份清理旧图、草稿、历史及待确认操作，取消登录和旧异步响应不能恢复旧内容。自动保存串行处理，冲突不覆盖；换图、重做、打开其他记录前确认未保存草稿。独立契约/安全复核提出的问题均补回归测试后解决，最终无剩余 P1/P2。
+- TDD/覆盖率：`npm run test:coverage` 共 47 文件、414 项通过；纳入统计的原有工具与新 BFF/工作流/UI 合计行 96.02%、分支 90.37%、语句 93.93%、函数 95.67%；新 UI 行 93.33%、分支 84.71%，工作流/客户端行 95.95%、分支 91.21%，BFF 行 99.23%、分支 93.58%。该统计不是整站所有 React 页面覆盖率。
+- 浏览器：`AIGC_PROMPT_INTEGRATION=1 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3126 npx playwright test e2e/image-to-prompt.spec.ts` 桌面/手机共 16 项通过；真实随机 PostgreSQL schema、Redis 命名空间和 worker，替代供应商/COS/验证码，无付费调用。覆盖选图→原位登录→双语结果、编辑/复制、历史/删除、关闭重开、失败主动重试、同一 launcher 账号隔离和三类未保存确认。主流程 pageerror 与 MISSING_MESSAGE 均为空。原有 `home.spec.ts`、`search.spec.ts`、`select-field.spec.ts` 另 32 项通过；仅更新过期主题/语言入口、推荐排序、URL 参数顺序与当前分类契约。修正开发 demo 中失效的 avatar/branding/scene 分类，避免缺失翻译。
+- 静态检查：`npm run lint`、`npm run typecheck`、`npm run build`、`git diff --check` 通过；生产构建包含所有新增 BFF 路由。未新增依赖。
+- 真实联调：网站文件选择→Next BFF→真实 FastAPI→私有 COS→PostgreSQL/Redis→独立 worker→DashScope `qwen3.8-max`→网站结果/历史，全链路完成。香水图执行 15.64 秒，1 条任务/1 次供应商 dispatch，761 输入 + 823 输出 = 1584 tokens。浏览器验证双语、画面拆解、编辑保存后恢复原文（revision=2）、重开历史和私有原图加载；完成这些操作后仍为 1 次模型调用。
+- 本地预览 `http://127.0.0.1:3126/` 已接真实解析后端 `127.0.0.1:8027`，使用隔离测试库中的「本地体验账号」。首页背景仍是既有开发 demo 画廊，解析结果是真实供应商返回。一次性本地登录 bootstrap 仅在 `/tmp` 预览 harness 中，不在产品源码；未运行真实邮箱发信、Google OAuth 或爬虫定时器。保留该账号自己的单条样例供体验，没有修改原开发库或生产数据。
+- 截图和脱敏实测结果在聊天工作区 `outputs/image-to-prompt-web/{desktop-real-result.png,mobile-real-result.png,live-verification.json}`；已恢复浏览器临时视口设置，保留结果页。实现位于独立 `feat/image-to-prompt-web` worktree，未提交、推送或部署。上线需一并交付共享后端分支、迁移、私有存储配置和独立 worker；本轮不包含小程序前端。
+
 ## 2026-10-10 · Google 登录构建配置修复（未上线）
 
 - 根因：Docker 构建未注入 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`，线上 JS 未包含客户端 ID。本地 `.env.local` 有值不代表 Docker 自动读取。

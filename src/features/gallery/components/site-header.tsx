@@ -69,7 +69,7 @@ export function SiteHeader({
       <div className={styles.topBar}>
         <BrandLogo />
         <div className={styles.searchSlot}>
-          <SearchTriggerGroup query={query} filters={popoverFilters.toString()} />
+          <SearchTriggerGroup query={query} filters={popoverFilters.toString()} userId={user?.id ?? null} />
         </div>
         <div className={styles.actions}>
           {!user && (

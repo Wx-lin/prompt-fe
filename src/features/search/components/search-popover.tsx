@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRef, useState, useSyncExternalStore } from "react";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { Popover } from "@base-ui/react/popover";
 import { Command } from "cmdk";
 import { Icon } from "@/components/icons/icon";
@@ -26,10 +26,11 @@ interface SearchPopoverProps {
   query: string;
   filters: string;
   inputRef?: React.RefObject<HTMLInputElement | null>;
+  endAdornment?: (close: () => void) => ReactNode;
 }
 
 /** Inline search: an anchored dropdown next to the trigger, not a full-screen dialog. */
-export function SearchPopover({ query: initialQuery, filters, inputRef: externalInputRef }: SearchPopoverProps) {
+export function SearchPopover({ query: initialQuery, filters, inputRef: externalInputRef, endAdornment }: SearchPopoverProps) {
   const t = useTranslations("header");
   const tSearch = useTranslations("search");
   const router = useRouter();
@@ -100,7 +101,7 @@ export function SearchPopover({ query: initialQuery, filters, inputRef: external
             ×
           </button>
         )}
-        <kbd className={styles.shortcutHint} aria-hidden>⌘K</kbd>
+        {endAdornment ? endAdornment(() => setOpen(false)) : <kbd className={styles.shortcutHint} aria-hidden>⌘K</kbd>}
       </div>
 
       <Popover.Portal>

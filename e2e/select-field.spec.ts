@@ -2,14 +2,14 @@ import { expect, test } from "@playwright/test";
 
 test("gallery filters expose distinct accessible names", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("combobox", { name: "排序方式", exact: true })).toHaveText("最新");
+  await expect(page.getByRole("combobox", { name: "排序方式", exact: true })).toHaveText("推荐");
   await expect(page.getByRole("combobox", { name: "模型", exact: true })).toHaveText("全部模型");
 });
 
 test("filter menus open below their triggers and remain inside the viewport", async ({ page }) => {
   await page.goto("/");
 
-  for (const currentValue of ["最新", "全部模型"]) {
+  for (const currentValue of ["推荐", "全部模型"]) {
     const trigger = page.getByRole("combobox").filter({ hasText: currentValue });
     await trigger.click();
     const popup = page.getByRole("listbox");
@@ -29,7 +29,7 @@ test("filter menus open below their triggers and remain inside the viewport", as
 
 test("selecting and resetting filters retains the other query parameters", async ({ page }) => {
   await page.goto("/?category=portrait");
-  const sort = page.getByRole("combobox").filter({ hasText: "最新" });
+  const sort = page.getByRole("combobox", { name: "排序方式", exact: true });
   await sort.click();
   await page.getByRole("option", { name: "最受欢迎", exact: true }).click();
   await expect(page).toHaveURL(/sort=popular/);
@@ -53,7 +53,7 @@ test("selecting and resetting filters retains the other query parameters", async
 });
 
 test("keyboard selection and outside dismissal use the library interactions", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/?sort=latest");
   const sort = page.getByRole("combobox").filter({ hasText: "最新" });
   await sort.focus();
   await page.keyboard.press("Enter");

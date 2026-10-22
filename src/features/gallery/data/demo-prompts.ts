@@ -50,7 +50,7 @@ export const demoPrompts: GalleryCard[] = [
   {
     id: "00000000-0000-4000-8000-000000000004",
     title: "雪地里的快乐柯基",
-    category: "head_avatar",
+    category: "avatar",
     models: ["DALL·E 3"],
     thumbnail_url: "/demo/corgi.jpg",
     image: "/demo/corgi.jpg",
@@ -65,7 +65,7 @@ export const demoPrompts: GalleryCard[] = [
   {
     id: "00000000-0000-4000-8000-000000000005",
     title: "极简香水产品摄影",
-    category: "logo",
+    category: "branding",
     models: ["DALL·E 3"],
     thumbnail_url: "/demo/perfume.jpg",
     image: "/demo/perfume.jpg",
@@ -110,7 +110,7 @@ export const demoPrompts: GalleryCard[] = [
   {
     id: "00000000-0000-4000-8000-000000000008",
     title: "欧式面包静物摄影",
-    category: "food",
+    category: "scene",
     models: ["FLUX.1"],
     thumbnail_url: "/demo/bread.jpg",
     image: "/demo/bread.jpg",
@@ -125,7 +125,7 @@ export const demoPrompts: GalleryCard[] = [
   {
     id: "00000000-0000-4000-8000-000000000009",
     title: "深夜食堂 · 日式拉面",
-    category: "food",
+    category: "scene",
     models: ["FLUX.1"],
     thumbnail_url: "/demo/ramen.jpg",
     image: "/demo/ramen.jpg",
@@ -140,7 +140,7 @@ export const demoPrompts: GalleryCard[] = [
   {
     id: "00000000-0000-4000-8000-000000000010",
     title: "墙头的猫咪",
-    category: "head_avatar",
+    category: "avatar",
     models: ["Midjourney"],
     thumbnail_url: "/demo/cat.jpg",
     image: "/demo/cat.jpg",

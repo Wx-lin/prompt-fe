@@ -43,18 +43,19 @@ test("theme preferences follow the system and persist explicit overrides", async
   await expect(page.locator("html")).toHaveAttribute("data-theme-preference", "system");
   await page.emulateMedia({ colorScheme: "dark" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await page.getByRole("button", { name: "外观与语言设置" }).click();
-  await expect(page.getByRole("menuitemradio", { name: "跟随系统" })).toHaveAttribute("aria-checked", "true");
-  await page.getByRole("menuitemradio", { name: "浅色模式" }).click();
+  await page.getByRole("combobox", { name: "主题: 跟随系统", exact: true }).click();
+  await expect(page.getByRole("option", { name: "跟随系统", exact: true })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("option", { name: "浅色模式", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(page.locator("html")).toHaveAttribute("data-theme-preference", "light");
-  await page.getByRole("button", { name: "外观与语言设置" }).click();
-  await page.getByRole("menuitemradio", { name: "跟随系统" }).click();
+  await page.getByRole("combobox", { name: "主题: 浅色模式", exact: true }).click();
+  await page.getByRole("option", { name: "跟随系统", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.getByRole("menuitemradio", { name: "跟随系统" })).toHaveAttribute("aria-checked", "true");
-  await expect(page.getByRole("menu")).toHaveCSS("opacity", "1");
+  await page.getByRole("combobox", { name: "主题: 跟随系统", exact: true }).click();
+  await expect(page.getByRole("option", { name: "跟随系统", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("listbox")).toHaveCSS("opacity", "1");
   await page.screenshot({ path: `/tmp/aigc-theme-menu-${test.info().project.name}.png`, animations: "disabled" });
   await page.keyboard.press("Escape");
   await page.goto("/prompt/00000000-0000-4000-8000-000000000001");
@@ -92,8 +93,7 @@ test("detail dismissal returns to the gallery and search stays inline, not a dia
 
 test("language toggle switches UI text to English", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "外观与语言设置" }).click();
-  await page.getByRole("menuitem", { name: "English" }).click();
+  await page.getByRole("link", { name: "切换语言，中英文", exact: true }).click();
   await expect(page).toHaveURL(/\/en\/?$/);
   await expect(page.getByRole("textbox", { name: "Search keyword" })).toBeVisible();
 });

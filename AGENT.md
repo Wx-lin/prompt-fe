@@ -92,3 +92,12 @@
 - 首页和分类支持真实 `page` 服务端分页、独立 canonical 与下一页锚点，保留无限滚动；任意关键词、模型或排序等查询组合 noindex/follow。详情 hreflang 必须指向同一作品，不能继承首页语言链接。JSON-LD 用户内容使用统一安全序列化工具转义 `<`。
 - sitemap 动态遍历公开 latest 列表并去重；接口失败、分页不前进必须失败，不能伪装成功发布不完整目录。单文件超50000 URL需拆分索引，不能静默截断。
 - 正式域名是 `https://aigc-prompt.com`；`NEXT_PUBLIC_SITE_URL` 在构建时注入，运行时改值不能替换已构建的公开环境变量。Google/Baidu HTML 验证码使用服务端可选环境变量，不在源码写入真实账号凭据；输出标签不代表平台验证已完成。
+
+## 2026-10-22 网站图片转提示词
+
+- 视觉基准新增 `docs/reference/ui/image-to-prompt/{upload-state-v2,result-state-v2}.png`。搜索框右侧的「反推提示词」打开同一双栏面板，保留现有搜索 Popover/cmdk 与画廊。深浅主题走原有 token；手机纵向布局。仅图片，不包含视频、生图、支付或模型选择。
+- 入口和交互在 `src/features/image-to-prompt/`；HTTP 契约在 `src/types/prompt-analysis.ts`，Next BFF 在 `src/lib/prompt-analysis/proxy.ts` 和 `src/app/api/prompt-{assets,analyses,examples}/`。后端需配套图片解析迁移、私有 COS、Redis、供应商配置与独立 worker；仅更新前端不会启用真实解析。
+- 选图只本地预览，点击开始后上传/创建。上传图片、结果和历史不写 localStorage；BFF 使用原 HttpOnly 会话，私有响应 no-store，写请求校验 Host/Origin。创建超时重试沿用原幂等键；关闭后重开只查询已有任务，只有主动重新反推才新建模型调用。
+- 原位登录复用 `LoginPage` 的可选回调，不改变独立登录页的原有跳转。首次登录保留未上传的本地选图；退出、切换账号会清空旧账号的图片、草稿和历史。登录完成再次确认当前身份，取消登录后的晚到响应不能恢复旧界面。
+- 同一次解析同时提供中英文；切语言、编辑、复制及重开历史不调用模型。编辑串行自动保存，保存失败保留草稿，版本冲突先复制再重开；换图、重做和打开其他历史前保护未保存内容。历史只展示当前用户的数据，删除前二次确认。
+- 可重复浏览器验收使用 `e2e/helpers/prompt-analysis-fixture.py` 的随机 PostgreSQL schema、Redis 命名空间与替代供应商；这不是线上演示接口。真实供应商验收需单独记录，不把 fixture 的返回当作模型效果。完整规格与实施清单在 `docs/superpowers/`。
