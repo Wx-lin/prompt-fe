@@ -332,7 +332,7 @@
 - 生产构建连接本机隔离 PostgreSQL fixture，桌面/手机 2 项 E2E 通过：上传→选择表情包与贴纸→提交→核对落库 `category=sticker`→待审不可公开→测试管理员批准→公开详情可读。COS、Redis、会话使用测试替身，不代表生产账户/COS 验收；未提交、推送或部署。
 - 本机 Next 16.4 会将 `127.0.0.1` 归一化为 `localhost`，直接以 `--hostname 127.0.0.1` 启动会让默认中文 rewrite 变成外部请求并循环跳转。测试服务使用 `NODE_OPTIONS=--dns-result-order=ipv4first`，配合 `npm run start -- --hostname localhost --port 3110`；Playwright 继续使用 `http://127.0.0.1:3110`。无需改动产品路由。
 
-## 2026-10-23 图片转提示词上新入口（本地完成，未部署）
+## 2026-10-23 图片转提示词上新入口
 
 - 按用户确认稿实现图片＋文字 SVG、透明入口、小型 NEW、首次可关闭的上新气泡；中英文与深浅主题完整。原解析面板、登录、BFF 与后端接口保持原合同，无新增依赖。
 - 状态仅保存无身份信息的关闭标记，SSR 不显示提示，跨标签同步、存储受限可用；活动截止北京时间 2026-11-07 00:00。默认首页提示，开始搜索、筛选、其他页头操作或进入工作台后收起。
@@ -340,5 +340,13 @@
 - 最终 434/434 单元测试通过；项目配置范围覆盖率 statements94.19%、branches90.38%、functions95.94%、lines96.13%，新增入口与活动状态均超过80%。ESLint、typecheck、production build、diff check通过。npm audit --omit=dev 返回0漏洞。
 - 新入口18项 + home12项 + select-field8项，最终同轮38/38通过；search12/12在上轮通过。覆盖中英文、深浅、320/390/681/768/900/901/1024/1536宽度，品牌不碰主题按钮、气泡不盖页头操作、关闭记忆、键盘焦点、搜索与工作台。展示测试阻断并断言0条上传/解析POST；未重复调用生产模型。
 - 真实浏览器预览为 http://127.0.0.1:3126/，使用本地公开演示图库验证布局；图片解析后台此时未启动，未用本次展示测试声称完成新的模型闭环。8张实际页面截图保存在聊天项目 outputs/feature-launch-implementation/。
-- 构建首次因 Next 16.4 的安全升级提醒主动停止，按同一命令重试后 exit0；没有修改或跳过版本检测。CLI建议升级，但本次 npm 审计无可核对的漏洞条目，未擅自改依赖或进行安全升级。提交/发布前应核对该既有框架提醒。
-- 没有提交、推送或部署此批前端改动。计划及行为边界见 docs/superpowers/plans/2026-10-23-feature-launch-entry.md。
+- 本地早期构建出现 Next 16.4 安全提醒；发布前合并主分支既有的 Next/eslint-config-next 16.4.2 补丁，保留 Search Console ownership 和部署测试修复。生产依赖审计显式使用官方 registry.npmjs.org。
+- 用户已授权部署本批前端改动；合并后经现有 main Actions 检查、构建和发布，并验证公网入口及上新提示行为。计划及行为边界见 docs/superpowers/plans/2026-10-23-feature-launch-entry.md。
+
+## 2026-10-23 Google Search Console 站点接入
+
+- 用户授权使用浏览器当前账号验证 https://aigc-prompt.com/ 并提交 sitemap。
+- 线上可抓取、sitemap 9382 地址，但站长平台此前未完成验证，后台仍仅人工导入；不能将空报表等同零曝光。
+- 添加 Search Console 实际签发的公开 HTML ownership meta，保留 GOOGLE_SITE_VERIFICATION 覆盖能力。该公开证明不是 API 密钥。接入结果以平台完成验证及 sitemap 状态为准。
+- 首次 Google HTML 验证返回服务器连接超时；重试后平台显示“已自动完成所有权验证”。服务器日志确认 Google-Site-Verification 请求首页200（2026-10-23），不能将首次超时推断为持续封禁。
+- 公共 npm 官方审计发现 Next16.4.0 受 GHSA-2464-fhr4-w9xw / GHSA-673q-mjm6-r5xr / GHSA-p3m5-59mp-jv5r 影响；默认镜像审计曾返回0，复核必须显式使用 registry.npmjs.org。最小升级 Next/eslint-config-next16.4.2，保留 sharp0.35.5；官方生产依赖审计0，414tests/lint/typecheck/build通过。

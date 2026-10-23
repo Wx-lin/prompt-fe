@@ -41,7 +41,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       description: t("ogDescription"),
     },
     verification: {
-      ...(process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : {}),
+      // Public ownership proof issued by Search Console, not an API credential.
+      google: process.env.GOOGLE_SITE_VERIFICATION ?? "JmXFPc75PJPDA8nHWPSaOVqGiNCu0uaxFlgPdgDKsVw",
       ...(process.env.BAIDU_SITE_VERIFICATION ? { other: { "baidu-site-verification": process.env.BAIDU_SITE_VERIFICATION } } : {}),
     },
     robots: { index: true, follow: true },
