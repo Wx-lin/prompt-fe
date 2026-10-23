@@ -331,3 +331,9 @@
 - TDD：分类单元及真实 POST handler 回归先出现 21 项预期失败，修复后专项 66 项全部通过，校验模块语句/分支/函数/行覆盖率均 100%；全量 249 项测试通过，默认覆盖率语句 93.75%、分支 91.72%、函数 95.55%、行 95.72%。lint、typecheck、生产构建和独立代码/安全审查通过。
 - 生产构建连接本机隔离 PostgreSQL fixture，桌面/手机 2 项 E2E 通过：上传→选择表情包与贴纸→提交→核对落库 `category=sticker`→待审不可公开→测试管理员批准→公开详情可读。COS、Redis、会话使用测试替身，不代表生产账户/COS 验收；未提交、推送或部署。
 - 本机 Next 16.4 会将 `127.0.0.1` 归一化为 `localhost`，直接以 `--hostname 127.0.0.1` 启动会让默认中文 rewrite 变成外部请求并循环跳转。测试服务使用 `NODE_OPTIONS=--dns-result-order=ipv4first`，配合 `npm run start -- --hostname localhost --port 3110`；Playwright 继续使用 `http://127.0.0.1:3110`。无需改动产品路由。
+
+## 2026-10-23 Google Search Console 站点接入
+
+- 用户授权使用浏览器当前账号验证 https://aigc-prompt.com/ 并提交 sitemap。
+- 线上可抓取、sitemap 9382 地址，但站长平台此前未完成验证，后台仍仅人工导入；不能将空报表等同零曝光。
+- 添加 Search Console 实际签发的公开 HTML ownership meta，保留 GOOGLE_SITE_VERIFICATION 覆盖能力。该公开证明不是 API 密钥。接入结果以平台完成验证及 sitemap 状态为准。
