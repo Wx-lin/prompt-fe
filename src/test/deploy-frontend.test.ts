@@ -49,7 +49,8 @@ it('continues exact image rollback and nginx reload when source restore fails', 
 });
 
 // These cases execute tar and a shell release script; health_failure runs all 30 probes.
-// Keep the timeout local so concurrent integration tests do not exhaust the 5s default.
+// Full-suite CPU contention can push the successful shell fixture past 15s on macOS.
+// Keep a bounded timeout local; all release/rollback assertions remain unchanged.
 it.each([['success', 0], ['health_failure', 1], ['stale_image', 1], ['post_copy_stale', 1]] as const)('runs the release state machine: %s', async (mode, status) => {
   const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
@@ -113,7 +114,7 @@ done`);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
-}, 15_000);
+}, 30_000);
 
 it('uploads only committed production source, excluding reference screenshots', () => {
   const workflow = readFileSync('.github/workflows/deploy.yml', 'utf8');
