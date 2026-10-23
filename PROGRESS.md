@@ -337,3 +337,5 @@
 - 用户授权使用浏览器当前账号验证 https://aigc-prompt.com/ 并提交 sitemap。
 - 线上可抓取、sitemap 9382 地址，但站长平台此前未完成验证，后台仍仅人工导入；不能将空报表等同零曝光。
 - 添加 Search Console 实际签发的公开 HTML ownership meta，保留 GOOGLE_SITE_VERIFICATION 覆盖能力。该公开证明不是 API 密钥。接入结果以平台完成验证及 sitemap 状态为准。
+- 首次 Google HTML 验证返回服务器连接超时；重试后平台显示“已自动完成所有权验证”。服务器日志确认 Google-Site-Verification 请求首页200（2026-10-23），不能将首次超时推断为持续封禁。
+- 公共 npm 官方审计发现 Next16.4.0 受 GHSA-2464-fhr4-w9xw / GHSA-673q-mjm6-r5xr / GHSA-p3m5-59mp-jv5r 影响；默认镜像审计曾返回0，复核必须显式使用 registry.npmjs.org。最小升级 Next/eslint-config-next16.4.2，保留 sharp0.35.5；官方生产依赖审计0，414tests/lint/typecheck/build通过。
