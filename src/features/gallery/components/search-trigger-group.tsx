@@ -26,5 +26,5 @@ export function SearchTriggerGroup({ query, filters, userId = null }: SearchTrig
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  return <SearchPopover query={query} filters={filters} inputRef={inputRef} endAdornment={close => <ImagePromptLauncher userId={userId} onOpen={close} />} />;
+  return <SearchPopover query={query} filters={filters} inputRef={inputRef} endAdornment={(close, searchOpen) => <ImagePromptLauncher userId={userId} onOpen={close} announcementAllowed={!searchOpen && !query && !filters} />} />;
 }

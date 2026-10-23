@@ -45,7 +45,7 @@ async function configureVision(request: APIRequestContext, email: string, mode: 
 }
 
 async function openTool(page: Page) {
-  await page.getByRole("button", { name: "反推提示词", exact: true }).click();
+  await page.getByRole("button", { name: "图片转提示词", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAccessibleName("反推提示词");

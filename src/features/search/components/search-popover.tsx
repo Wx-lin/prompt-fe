@@ -26,7 +26,7 @@ interface SearchPopoverProps {
   query: string;
   filters: string;
   inputRef?: React.RefObject<HTMLInputElement | null>;
-  endAdornment?: (close: () => void) => ReactNode;
+  endAdornment?: (close: () => void, open: boolean) => ReactNode;
 }
 
 /** Inline search: an anchored dropdown next to the trigger, not a full-screen dialog. */
@@ -74,34 +74,37 @@ export function SearchPopover({ query: initialQuery, filters, inputRef: external
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen} modal={false}>
-      <div ref={anchorRef} className={styles.searchBox}>
-        <Icon name="search" size={17} />
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          onKeyDown={handleInputKeyDown}
-          placeholder={t("searchPlaceholder")}
-          aria-label={t("searchAriaLabel")}
-          className={styles.input}
-        />
-        {query && (
-          <button
-            type="button"
-            className={styles.clear}
-            aria-label={t("clearSearchAriaLabel")}
-            onClick={() => {
-              setQuery("");
-              setOpen(false);
-              inputRef.current?.blur();
-              if (initialQuery) router.push(resultsHref(""));
-            }}
-          >
-            ×
-          </button>
-        )}
-        {endAdornment ? endAdornment(() => setOpen(false)) : <kbd className={styles.shortcutHint} aria-hidden>⌘K</kbd>}
+      <div className={styles.triggerGroup}>
+        <div ref={anchorRef} className={styles.searchBox}>
+          <Icon name="search" size={17} />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
+            onFocus={() => setOpen(true)}
+            onKeyDown={handleInputKeyDown}
+            placeholder={t("searchPlaceholder")}
+            aria-label={t("searchAriaLabel")}
+            className={styles.input}
+          />
+          {query && (
+            <button
+              type="button"
+              className={styles.clear}
+              aria-label={t("clearSearchAriaLabel")}
+              onClick={() => {
+                setQuery("");
+                setOpen(false);
+                inputRef.current?.blur();
+                if (initialQuery) router.push(resultsHref(""));
+              }}
+            >
+              ×
+            </button>
+          )}
+          {!endAdornment && <kbd className={styles.shortcutHint} aria-hidden>⌘K</kbd>}
+        </div>
+        {endAdornment?.(() => setOpen(false), open)}
       </div>
 
       <Popover.Portal>

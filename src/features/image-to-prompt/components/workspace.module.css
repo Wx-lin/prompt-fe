@@ -59,8 +59,6 @@
 .languagePositioner { z-index: calc(var(--z-modal) + 3); }
 .footerActions { display: flex; justify-content: flex-end; gap: 12px; align-items: center; }
 .copyFeedback { position: absolute; bottom: 84px; right: 32px; margin: 0; padding: 8px 12px; border: 1px solid var(--color-border-strong); border-radius: 8px; background: var(--color-surface); color: var(--color-text); font-size: 12px; box-shadow: 0 4px 18px var(--color-shadow); }
-.entry { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 28px; padding: 0 4px 0 14px; border: 0; border-left: 1px solid var(--color-border-strong); background: transparent; color: var(--color-text); font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer; }
-.entry:hover { color: var(--color-text-muted); }
 @media (min-width: 1440px) { .popup { width: 1060px; } .content { min-height: 432px; } .referenceStage { height: 320px; } .dropzone { min-height: 320px; } .promptText { min-height: 312px; } }
 @media (max-width: 680px) {
  .popup { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); border-radius: 15px; }
@@ -93,7 +91,5 @@
  .primaryButton, .secondaryButton { padding: 10px 12px; min-width: 0; font-size: 12px; gap: 6px; }
  .primaryButton svg, .secondaryButton svg { width: 16px; height: 16px; }
  .copyFeedback { bottom: 120px; right: 20px; max-width: calc(100% - 40px); }
- .entry { font-size: 12px; gap: 6px; padding-left: 10px; }
- .entry svg { width: 17px; height: 17px; }
 }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } .backdrop { transition: none; } }

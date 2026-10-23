@@ -214,6 +214,11 @@
   },
   "imageToPrompt": {
     "entry": "Image to prompt",
+    "announcementEyebrow": "New feature",
+    "announcementTitle": "Images can become prompts, too",
+    "announcementDescription": "Upload a reference to extract its content, style and composition.",
+    "announcementDismiss": "Dismiss new feature announcement",
+    "announcementAction": "Upload image",
     "title": "Image to prompt",
     "description": "Upload a reference and get an editable prompt",
     "reference": "Reference",

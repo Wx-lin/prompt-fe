@@ -15,7 +15,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ id: "c7f83e2e-6725-48cf-9f6c-f6529060b8a6" })));
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.clearAllMocks(); });
-function show() { render(<NextIntlClientProvider locale="zh" messages={messages}><ImagePromptLauncher /></NextIntlClientProvider>); fireEvent.click(screen.getByRole("button", { name: "反推提示词" })); }
+function show() { render(<NextIntlClientProvider locale="zh" messages={messages}><ImagePromptLauncher /></NextIntlClientProvider>); fireEvent.click(screen.getByRole("button", { name: "图片转提示词" })); }
 it("opens yesterday's unified workspace and requires an image before analysis", () => {
   show();
   expect(screen.getByRole("dialog", { name: "反推提示词" })).toBeVisible();

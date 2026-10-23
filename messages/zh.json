@@ -213,7 +213,12 @@
     "uploading": "上传中…"
   },
   "imageToPrompt": {
-    "entry": "反推提示词",
+    "entry": "图片转提示词",
+    "announcementEyebrow": "新功能上线",
+    "announcementTitle": "图片，也能变成提示词",
+    "announcementDescription": "上传参考图，提取画面、风格与构图。",
+    "announcementDismiss": "关闭新功能提示",
+    "announcementAction": "上传图片",
     "title": "反推提示词",
     "description": "上传参考图片，提取可编辑的提示词",
     "reference": "参考素材",

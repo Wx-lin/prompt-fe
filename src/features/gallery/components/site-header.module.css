@@ -15,7 +15,12 @@
 .publishDescription { margin: 10px 0 18px; font-size: 14px; line-height: 1.6; color: var(--color-text-muted); }
 .publishClose { padding: 8px 14px; border: 0; border-radius: 7px; background: var(--color-action); color: var(--color-action-text); cursor: pointer; }
 @media (max-width: 1200px) { .topBar { grid-template-columns: auto minmax(180px, 1fr) auto; gap: 20px; padding-inline: 24px; } .navigationRow { padding-inline: 12px 24px; gap: 10px; } }
-@media (max-width: 900px) { .navigationRow { flex-wrap: wrap; padding-bottom: 10px; } .filters { margin-left: auto; } }
+@media (max-width: 900px) {
+ .topBar { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 60px 44px; gap: 0 8px; padding-bottom: 10px; }
+ .searchSlot { grid-column: 1 / -1; grid-row: 2; }
+ .navigationRow { flex-wrap: wrap; padding-bottom: 10px; }
+ .filters { margin-left: auto; }
+}
 @media (max-width: 680px) {
  .topBar { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 60px 44px; gap: 0 8px; padding: 0 16px 10px; }
  .searchSlot { grid-column: 1 / -1; grid-row: 2; }

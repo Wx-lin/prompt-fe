@@ -1,6 +1,7 @@
 "use client";
 
 import type { ModelOption } from "@/lib/api/client";
+import type { SyntheticEvent } from "react";
 
 import { useTranslations } from "next-intl";
 import { BrandLogo } from "@/components/brand/brand-logo";
@@ -12,6 +13,7 @@ import { PublishButton } from "./publish-button";
 import { UserMenu } from "@/features/auth/components/user-menu";
 import { CategoryNav } from "@/features/gallery/components/category-nav";
 import { SearchTriggerGroup } from "@/features/gallery/components/search-trigger-group";
+import { dismissAnnouncement, getAnnouncementSnapshot } from "@/features/image-to-prompt/lib/announcement";
 import { Link } from "@/i18n/navigation";
 import type { Category, CurrentUser } from "@/types/prompt";
 import styles from "./site-header.module.css";
@@ -64,8 +66,16 @@ export function SiteHeader({
     ...models.map((model) => ({ label: model.label, value: model.key, group: model.group })),
   ];
 
+  function continueHeaderTask(event: SyntheticEvent<HTMLElement>) {
+    // Other portal-based menus can be protected from Popover outside-press handling.
+    // Any deliberate header task ends the first-use promotion before its menu opens.
+    if (event.target instanceof Element && !event.target.closest("[data-image-prompt-entry], [data-feature-announcement]") && getAnnouncementSnapshot() === "active") {
+      dismissAnnouncement();
+    }
+  }
+
   return (
-    <header className={styles.header}>
+    <header className={styles.header} onPointerDownCapture={continueHeaderTask} onFocusCapture={continueHeaderTask}>
       <div className={styles.topBar}>
         <BrandLogo />
         <div className={styles.searchSlot}>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { Dialog } from "@base-ui/react/dialog";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { Button } from "@base-ui/react/button";
-import { ArrowLeft, Copy, History, LoaderCircle, RefreshCw, ScanLine, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, Copy, History, LoaderCircle, RefreshCw, WandSparkles, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { LoginPage } from "@/features/auth/components/login-page";
@@ -13,10 +13,11 @@ import { ImageInput } from "./image-input";
 import { AnalysisResultPane } from "./analysis-result";
 import { AnalysisHistory } from "./analysis-history";
 import { OutputLanguage } from "./language-select";
+import { ImagePromptEntry } from "./image-prompt-entry";
 import styles from "./workspace.module.css";
 import confirmStyles from "./history.module.css";
 
-export function ImagePromptLauncher({ onOpen, userId = null }: { onOpen?: () => void; userId?: string | null }) {
+export function ImagePromptLauncher({ onOpen, userId = null, announcementAllowed = true }: { onOpen?: () => void; userId?: string | null; announcementAllowed?: boolean }) {
   const t = useTranslations("imageToPrompt");
   const locale = useLocale();
   const router = useRouter();
@@ -82,7 +83,7 @@ export function ImagePromptLauncher({ onOpen, userId = null }: { onOpen?: () => 
 
   return <>
     <Dialog.Root open={open && !login} onOpenChange={value => { setOpen(value); if (value) setHistoryView(false); }}>
-      <Dialog.Trigger className={styles.entry} data-image-prompt-entry onClick={onOpen}><ScanLine size={20} strokeWidth={1.6} /><span>{t("entry")}</span></Dialog.Trigger>
+      <ImagePromptEntry onOpen={onOpen} announcementAllowed={announcementAllowed && !open && !login} />
       <Dialog.Portal><Dialog.Backdrop className={styles.backdrop} /><Dialog.Popup className={styles.popup}>
         <header className={styles.heading}><div><Dialog.Title className={styles.title}>{t(historyView ? "history" : "title")}</Dialog.Title><Dialog.Description className={styles.description}>{t("description")}</Dialog.Description></div>
           <div className={styles.headerActions}>
