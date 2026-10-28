@@ -6,6 +6,7 @@ import { GalleryPage } from "./gallery-page";
 import styles from "./gallery-page.module.css";
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("./site-header", () => ({ SiteHeader: () => null }));
+vi.mock("./gallery-toolbar", () => ({ GalleryToolbar: () => null }));
 vi.mock("@/i18n/navigation", () => ({ Link: (props: ComponentProps<"a">) => <a {...props} /> }));
 vi.mock("./gallery-grid", () => ({ GalleryGrid: ({ items, sentinelRef, loadingMore, endOfList }: { items: GalleryCard[]; sentinelRef: Ref<HTMLDivElement>; loadingMore: boolean; endOfList: boolean }) => <div><div ref={sentinelRef} />{items.map(item => <span key={item.id}>{item.id}</span>)}{loadingMore && <span>pending</span>}{endOfList && <span>end</span>}</div> }));
 let notify: () => void;

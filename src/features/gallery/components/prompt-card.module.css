@@ -36,6 +36,15 @@
 }
 
 .model { margin: 2px 0 0; color: var(--color-text-muted); font-size: 11px; line-height: 1.4; }
+.referenceAction { position: absolute; z-index: 1; right: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 7px 12px; border: 1px solid rgb(255 255 255 / 30%); border-radius: 22px; background: rgb(23 23 23 / 65%); color: #fff; font: inherit; font-size: 12px; cursor: pointer; opacity: 0; backdrop-filter: blur(10px); }
+.card:hover .referenceAction, .card:focus-within .referenceAction, .referenceSelected .referenceAction { opacity: 1; }
+.referenceAction:focus-visible { outline: 2px solid var(--color-action-text); outline-offset: 3px; }
+.referenceLabel { position: absolute; top: 10px; left: 10px; z-index: 1; padding: 5px 9px; border-radius: 16px; color: #fff; background: rgb(23 23 23 / 65%); font-size: 11px; pointer-events: none; }
+.referenceSelected .artworkFrame { outline: 1px solid var(--color-text-muted); outline-offset: -1px; }
+.creationCard .cardActions { bottom: 56px; }
+.creationCard .overlayCaption { display: none; }
+.card:hover .referenceLabel, .card:focus-within .referenceLabel { opacity: 0; }
+@media (hover: none) { .referenceAction { opacity: 1; } }
 
 .hoverTools {
   position: absolute;

@@ -4,6 +4,7 @@ import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { defaultLocale, routing } from "@/i18n/routing";
+import { CreationProvider } from "@/features/prompt-creation/components/creation-provider";
 
 type LocaleLayoutProps = Readonly<{
   children: ReactNode;
@@ -21,7 +22,7 @@ function localizedPath(locale: string): string {
   return locale === defaultLocale ? "/" : `/${locale}`;
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: LocaleLayoutProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "metadata" });
 
@@ -65,8 +66,10 @@ export default async function LocaleLayout({ children, modal, params }: LocaleLa
 
   return (
     <NextIntlClientProvider>
-      {children}
-      {modal}
+      <CreationProvider>
+        {children}
+        {modal}
+      </CreationProvider>
     </NextIntlClientProvider>
   );
 }

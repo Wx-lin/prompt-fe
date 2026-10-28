@@ -16,15 +16,15 @@ export function GallerySkeletonCard({ index }: { index: number }) {
   );
 }
 
-export function GallerySkeleton() {
+export function GallerySkeleton({ compact = false }: { compact?: boolean }) {
   const t = useTranslations("gallery");
   return (
     <div role="status" aria-label={t("loading")} aria-busy="true" data-testid="gallery-skeleton">
-      {[{ name: "desktop", columns: 5 }, { name: "mobile", columns: 2 }].map(({ name, columns }) => (
-        <div key={name} className={name === "desktop" ? gridStyles.desktopGrid : gridStyles.mobileGrid} aria-hidden="true">
+      {[{ name: "desktop", columns: compact ? 3 : 5 }, { name: "mobile", columns: 2 }].map(({ name, columns }) => (
+        <div key={name} className={name === "desktop" ? `${gridStyles.desktopGrid} ${compact ? gridStyles.compactGrid : ""}` : gridStyles.mobileGrid} aria-hidden="true" data-layout={name}>
           {Array.from({ length: columns }, (_, column) => (
             <div className={gridStyles.column} key={column}>
-              {Array.from({ length: 10 / columns }, (_, row) => (
+              {Array.from({ length: Math.ceil((10 - column) / columns) }, (_, row) => (
                 <GallerySkeletonCard key={row} index={column + row * columns} />
               ))}
             </div>

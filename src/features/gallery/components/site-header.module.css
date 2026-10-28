@@ -1,33 +1,17 @@
 .header { position: relative; z-index: var(--z-header); background: var(--color-page); color: var(--color-text); }
-.topBar { display: grid; grid-template-columns: minmax(245px, 1fr) minmax(260px, 680px) minmax(190px, 1fr); align-items: center; gap: 28px; min-height: 76px; padding: 0 34px; }
-.searchSlot { min-width: 0; }
-.actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
-.publishButton, .loginButton { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 10px; height: 42px; padding: 0 18px; border: 1px solid transparent; border-radius: 10px; background: var(--color-action); color: var(--color-action-text); font-family: inherit; font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.topBar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 24px; min-height: 72px; padding: 0 34px; }
+.actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
+.publishButton, .loginButton { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 10px; height: 42px; padding: 0 18px; border: 1px solid var(--color-border-strong); border-radius: 12px; background: var(--color-surface); color: var(--color-text); font-family: inherit; font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap; cursor: pointer; }
 .plus { font-size: 24px; font-weight: 300; line-height: 1; }
-.loginButton { padding: 0 12px; background: transparent; color: var(--color-text); }
-.publishButton:hover { opacity: .85; }
+.loginButton { padding: 0 12px; border-color: transparent; background: transparent; }
+.publishButton:hover, .loginButton:hover { background: var(--color-hover); }
 .publishButton:focus-visible, .loginButton:focus-visible { outline: 2px solid var(--color-text); outline-offset: 3px; }
-.navigationRow { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 54px; padding: 0 34px 6px 22px; }
-.filters { display: flex; flex-shrink: 0; gap: 10px; }
-.publishPositioner { z-index: var(--z-popover); }
-.publishPopup { width: min(280px, calc(100vw - 32px)); padding: 20px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); color: var(--color-text); box-shadow: 0 12px 32px var(--color-shadow); }
-.publishTitle { margin: 0; font-size: 16px; }
-.publishDescription { margin: 10px 0 18px; font-size: 14px; line-height: 1.6; color: var(--color-text-muted); }
-.publishClose { padding: 8px 14px; border: 0; border-radius: 7px; background: var(--color-action); color: var(--color-action-text); cursor: pointer; }
-@media (max-width: 1200px) { .topBar { grid-template-columns: auto minmax(180px, 1fr) auto; gap: 20px; padding-inline: 24px; } .navigationRow { padding-inline: 12px 24px; gap: 10px; } }
-@media (max-width: 900px) {
- .topBar { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 60px 44px; gap: 0 8px; padding-bottom: 10px; }
- .searchSlot { grid-column: 1 / -1; grid-row: 2; }
- .navigationRow { flex-wrap: wrap; padding-bottom: 10px; }
- .filters { margin-left: auto; }
-}
+@media (max-width: 1200px) { .topBar { padding-inline: 24px; gap: 16px; } }
 @media (max-width: 680px) {
- .topBar { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 60px 44px; gap: 0 8px; padding: 0 16px 10px; }
- .searchSlot { grid-column: 1 / -1; grid-row: 2; }
+ .topBar { min-height: 64px; gap: 8px; padding-inline: 16px; }
  .actions { gap: 4px; }
- .publishButton { height: 36px; padding: 0 10px; gap: 5px; font-size: 12px; border-radius: 8px; }
+ .publishButton { height: 36px; padding-inline: 10px; gap: 5px; font-size: 12px; border-radius: 10px; }
  .plus { font-size: 20px; }
- .loginButton { height: 36px; padding: 0 5px; font-size: 12px; }
- .navigationRow { gap: 0; padding: 0 16px 8px; }
- .filters { gap: 6px; }
+ .loginButton { height: 36px; padding-inline: 5px; font-size: 12px; }
 }
+@media (max-width: 480px) { .publishLabel { display: none; } .publishButton { width: 34px; padding: 0; } }

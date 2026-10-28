@@ -27,10 +27,11 @@ interface SearchPopoverProps {
   filters: string;
   inputRef?: React.RefObject<HTMLInputElement | null>;
   endAdornment?: (close: () => void, open: boolean) => ReactNode;
+  appearance?: "default" | "gallery";
 }
 
 /** Inline search: an anchored dropdown next to the trigger, not a full-screen dialog. */
-export function SearchPopover({ query: initialQuery, filters, inputRef: externalInputRef, endAdornment }: SearchPopoverProps) {
+export function SearchPopover({ query: initialQuery, filters, inputRef: externalInputRef, endAdornment, appearance = "default" }: SearchPopoverProps) {
   const t = useTranslations("header");
   const tSearch = useTranslations("search");
   const router = useRouter();
@@ -75,7 +76,7 @@ export function SearchPopover({ query: initialQuery, filters, inputRef: external
   return (
     <Popover.Root open={open} onOpenChange={setOpen} modal={false}>
       <div className={styles.triggerGroup}>
-        <div ref={anchorRef} className={styles.searchBox}>
+        <div ref={anchorRef} className={`${styles.searchBox} ${appearance === "gallery" ? styles.gallerySearchBox : ""}`}>
           <Icon name="search" size={17} />
           <input
             ref={inputRef}
@@ -102,7 +103,7 @@ export function SearchPopover({ query: initialQuery, filters, inputRef: external
               ×
             </button>
           )}
-          {!endAdornment && <kbd className={styles.shortcutHint} aria-hidden>⌘K</kbd>}
+          {!endAdornment && appearance !== "gallery" && <kbd className={styles.shortcutHint} aria-hidden>⌘K</kbd>}
         </div>
         {endAdornment?.(() => setOpen(false), open)}
       </div>

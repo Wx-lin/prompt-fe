@@ -15,9 +15,12 @@ interface GalleryGridProps {
   sentinelRef?: Ref<HTMLDivElement>;
   loadingMore?: boolean;
   endOfList?: boolean;
+  compact?: boolean;
+  onUseReference?: (prompt: GalleryCard) => void;
+  activeReferenceId?: string;
 }
 
-export function GalleryGrid({ items, emptyMessage, sentinelRef, loadingMore = false, endOfList = false }: GalleryGridProps) {
+export function GalleryGrid({ items, emptyMessage, sentinelRef, loadingMore = false, endOfList = false, compact = false, onUseReference, activeReferenceId }: GalleryGridProps) {
   const t = useTranslations("gallery");
   // Key by image URL: a replacement cover for the same prompt can still be shown.
   const [overlongImages, setOverlongImages] = useState<ReadonlySet<string>>(() => new Set());
@@ -30,7 +33,7 @@ export function GalleryGrid({ items, emptyMessage, sentinelRef, loadingMore = fa
   // assumed) so the greedy "shortest column first" distribution reflects real layout instead
   // of just item count.
   const estimateHeight = (item: GalleryCard) => (item.imageWidth > 0 ? item.imageHeight / item.imageWidth : 1);
-  const desktopColumns = distributeItems(visibleItems, 5, estimateHeight);
+  const desktopColumns = distributeItems(visibleItems, compact ? 3 : 5, estimateHeight);
   const mobileColumns = distributeItems(visibleItems, 2, estimateHeight);
 
   return (
@@ -43,15 +46,15 @@ export function GalleryGrid({ items, emptyMessage, sentinelRef, loadingMore = fa
       )}
       {(visibleItems.length > 0 || loadingMore) && (
         <>
-          <div className={styles.desktopGrid} aria-label={t("waterfallAriaLabel")} aria-busy={loadingMore} data-testid="gallery-grid" data-layout="desktop">
+          <div className={`${styles.desktopGrid} ${compact ? styles.compactGrid : ""}`} aria-label={t("waterfallAriaLabel")} aria-busy={loadingMore} data-testid="gallery-grid" data-layout="desktop" data-compact={compact}>
             {desktopColumns.map((column, columnIndex) => <div className={styles.column} key={`desktop-${columnIndex}`}>
-              {column.map((item) => <PromptCard key={item.id} prompt={item} onOverlongImage={hideOverlongImage} previewHover={item.id.endsWith("0001")} />)}
+              {column.map((item) => <PromptCard key={item.id} prompt={item} onOverlongImage={hideOverlongImage} previewHover={!onUseReference && item.id.endsWith("0001")} onUseReference={onUseReference} isReference={activeReferenceId === item.id} />)}
               {loadingMore && <GallerySkeletonCard index={columnIndex} />}
             </div>)}
           </div>
           <div className={styles.mobileGrid} aria-label={t("waterfallAriaLabel")} aria-busy={loadingMore} data-layout="mobile">
             {mobileColumns.map((column, columnIndex) => <div className={styles.column} key={`mobile-${columnIndex}`}>
-              {column.map((item) => <PromptCard key={item.id} prompt={item} onOverlongImage={hideOverlongImage} previewHover={item.id.endsWith("0001")} />)}
+              {column.map((item) => <PromptCard key={item.id} prompt={item} onOverlongImage={hideOverlongImage} previewHover={!onUseReference && item.id.endsWith("0001")} onUseReference={onUseReference} isReference={activeReferenceId === item.id} />)}
               {loadingMore && <GallerySkeletonCard index={columnIndex} />}
             </div>)}
           </div>

@@ -26,6 +26,26 @@ function card(id: string, width = 300, height = 400): GalleryCard {
 }
 
 describe("gallery long-image filtering", () => {
+  it("reflows to three columns and offers a reference action without opening a detail or generating", () => {
+    const source = card("reference");
+    const useReference = vi.fn();
+    const { rerender } = render(<GalleryGrid items={[source, card("other")]} compact onUseReference={useReference} activeReferenceId={source.id} />);
+    const feed = screen.getByTestId("gallery-grid");
+    expect(feed.children).toHaveLength(3);
+    expect(feed).toHaveAttribute("data-compact", "true");
+    expect(screen.getAllByText("currentReference")).toHaveLength(2);
+    fireEvent.click(screen.getAllByRole("button", { name: "createFromImageAriaLabel" })[0]);
+    expect(useReference).toHaveBeenCalledExactlyOnceWith(source);
+    expect(screen.getAllByRole("link", { name: "viewAriaLabel" })[0]).toHaveAttribute("href", "/prompt/reference");
+    rerender(<GalleryGrid items={[source, card("other")]} onUseReference={useReference} />);
+    expect(feed.children).toHaveLength(5);
+    expect(screen.queryByText("currentReference")).not.toBeInTheDocument();
+  });
+
+  it("does not offer the reference action when a card has no usable image", () => {
+    render(<GalleryGrid items={[{ ...card("missing"), image: "" }]} onUseReference={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "createFromImageAriaLabel" })).not.toBeInTheDocument();
+  });
   it("keeps an image placeholder until load or failure and resets it for replacement images", () => {
     const { rerender } = render(<GalleryGrid items={[card("cover")]} />);
     expect(screen.getAllByTestId("gallery-image-skeleton")).toHaveLength(2);

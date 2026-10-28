@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { ImagePlus } from "lucide-react";
 import { Icon } from "@/components/icons/icon";
 import { Link, useRouter } from "@/i18n/navigation";
 import type { GalleryCard } from "@/types/prompt";
@@ -14,11 +15,13 @@ interface PromptCardProps {
   prompt: GalleryCard;
   previewHover?: boolean;
   onOverlongImage?: (image: string) => void;
+  onUseReference?: (prompt: GalleryCard) => void;
+  isReference?: boolean;
 }
 
 const defaultAspectRatio = 3 / 4;
 
-export function PromptCard({ prompt, previewHover = false, onOverlongImage }: PromptCardProps) {
+export function PromptCard({ prompt, previewHover = false, onOverlongImage, onUseReference, isReference = false }: PromptCardProps) {
   const t = useTranslations("card");
   const tCategories = useTranslations("categories");
   const router = useRouter();
@@ -85,7 +88,7 @@ export function PromptCard({ prompt, previewHover = false, onOverlongImage }: Pr
   }
 
   return (
-    <article className={`${styles.card} ${previewHover ? styles.previewHover : ""}`}>
+    <article className={`${styles.card} ${previewHover ? styles.previewHover : ""} ${onUseReference ? styles.creationCard : ""} ${isReference ? styles.referenceSelected : ""}`} data-prompt-id={prompt.id}>
       <div className={styles.artworkFrame} style={{ aspectRatio }}>
         <Link className={styles.artworkLink} href={detailHref} aria-label={t("viewAriaLabel", { title: prompt.title })}>
           {imageLoading && <div className={`${skeletonStyles.image} ${skeletonStyles.imagePlaceholder}`} aria-hidden="true" data-testid="gallery-image-skeleton" />}
@@ -141,6 +144,12 @@ export function PromptCard({ prompt, previewHover = false, onOverlongImage }: Pr
             </button>
           </div>
         </div>
+        {onUseReference && prompt.image && <>
+          {isReference && <span className={styles.referenceLabel}>{t("currentReference")}</span>}
+          <button type="button" className={styles.referenceAction} aria-label={t("createFromImageAriaLabel", { title: prompt.title })} onClick={() => onUseReference(prompt)}>
+            <ImagePlus size={16} aria-hidden="true" />{t("createFromImage")}
+          </button>
+        </>}
       </div>
 
       <div className={styles.cardText}>

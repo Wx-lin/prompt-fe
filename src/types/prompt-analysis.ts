@@ -22,7 +22,15 @@ export type AnalysisAsset = {
 
 type AnalysisRecord = {
   id: string;
-  asset_id: string;
+  asset_id: string | null;
+  input_type?: "image" | "text";
+  idea_text?: string | null;
+  purpose?: "wallpaper" | "avatar" | "poster" | "product" | "illustration" | null;
+  style?: "cinematic" | "photorealistic" | "illustration" | "anime" | "minimalist" | null;
+  conversation_id?: string;
+  parent_analysis_id?: string | null;
+  user_message?: string;
+  version?: number;
   status: AnalysisStatus;
   phase: string;
   revision: number;

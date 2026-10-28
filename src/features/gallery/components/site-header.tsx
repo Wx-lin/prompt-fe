@@ -1,117 +1,35 @@
 "use client";
 
-import type { ModelOption } from "@/lib/api/client";
-import type { SyntheticEvent } from "react";
-
 import { useTranslations } from "next-intl";
 import { BrandLogo } from "@/components/brand/brand-logo";
-import { SelectField } from "@/components/select-field/select-field";
 import { ThemeToggleControl } from "@/components/theme-provider/theme-toggle-control";
-import { LanguageToggle } from "./language-toggle";
 import { AccountPreferences } from "@/features/auth/components/account-preferences";
-import { PublishButton } from "./publish-button";
 import { UserMenu } from "@/features/auth/components/user-menu";
-import { CategoryNav } from "@/features/gallery/components/category-nav";
-import { SearchTriggerGroup } from "@/features/gallery/components/search-trigger-group";
-import { dismissAnnouncement, getAnnouncementSnapshot } from "@/features/image-to-prompt/lib/announcement";
 import { Link } from "@/i18n/navigation";
-import type { Category, CurrentUser } from "@/types/prompt";
+import type { CurrentUser } from "@/types/prompt";
+import { GalleryToolbar, type GalleryToolbarProps } from "./gallery-toolbar";
+import { LanguageToggle } from "./language-toggle";
+import { PublishButton } from "./publish-button";
 import styles from "./site-header.module.css";
 
-interface SiteHeaderProps {
-  categories: Category[];
-  activeCategory: string;
-  activeSort: string;
-  activeModel: string;
-  models: ModelOption[];
-  query?: string;
+interface SiteHeaderProps extends GalleryToolbarProps {
   user?: CurrentUser | null;
   showNavigationRow?: boolean;
 }
 
-export function SiteHeader({
-  categories,
-  activeCategory,
-  activeSort,
-  activeModel,
-  models,
-  query = "",
-  user = null,
-  showNavigationRow = true,
-}: SiteHeaderProps) {
+export function SiteHeader({ user = null, showNavigationRow = true, ...gallery }: SiteHeaderProps) {
   const t = useTranslations("header");
-  const filters = new URLSearchParams();
-  if (query) filters.set("q", query);
-  if (activeCategory !== "all") filters.set("category", activeCategory);
-  if (activeSort !== "recommended" || query) filters.set("sort", activeSort);
-  if (activeModel !== "all") filters.set("models", activeModel);
-  const popoverFilters = new URLSearchParams(filters);
-  popoverFilters.delete("q");
-
-  function categoryHref(category: string) {
-    const params = new URLSearchParams(filters);
-    if (category === "all") params.delete("category");
-    else params.set("category", category);
-    return params.size ? `/?${params}` : "/";
-  }
-
-  const sortOptions = [
-    { label: t("sortRecommended"), value: "recommended" },
-    { label: t("sortLatest"), value: "latest" },
-    { label: t("sortPopular"), value: "popular" },
-    { label: t("sortHot"), value: "hot" },
-  ];
-  const modelOptions = [
-    { label: t("allModels"), value: "all" },
-    ...models.map((model) => ({ label: model.label, value: model.key, group: model.group })),
-  ];
-
-  function continueHeaderTask(event: SyntheticEvent<HTMLElement>) {
-    // Other portal-based menus can be protected from Popover outside-press handling.
-    // Any deliberate header task ends the first-use promotion before its menu opens.
-    if (event.target instanceof Element && !event.target.closest("[data-image-prompt-entry], [data-feature-announcement]") && getAnnouncementSnapshot() === "active") {
-      dismissAnnouncement();
-    }
-  }
-
   return (
-    <header className={styles.header} onPointerDownCapture={continueHeaderTask} onFocusCapture={continueHeaderTask}>
-      <div className={styles.topBar}>
-        <BrandLogo />
-        <div className={styles.searchSlot}>
-          <SearchTriggerGroup query={query} filters={popoverFilters.toString()} userId={user?.id ?? null} />
-        </div>
+    <header className={styles.header}>
+      <div className={styles.topBar} data-site-topbar>
+        <BrandLogo label={t("creationBrand")} />
         <div className={styles.actions}>
-          {!user && (
-            <>
-              <ThemeToggleControl />
-              <LanguageToggle ariaLabel={t("languageAriaLabel")} />
-            </>
-          )}
+          {!user && <><ThemeToggleControl /><LanguageToggle ariaLabel={t("languageAriaLabel")} /></>}
           <PublishButton />
-          {user ? (
-            <UserMenu user={user} preferences={<AccountPreferences />} />
-          ) : (
-            <Link className={styles.loginButton} href="/login">{t("login")}</Link>
-          )}
+          {user ? <UserMenu user={user} preferences={<AccountPreferences />} /> : <Link className={styles.loginButton} href="/login">{t("login")}</Link>}
         </div>
       </div>
-
-      {showNavigationRow && (
-        <div className={styles.navigationRow}>
-          <CategoryNav
-            categories={categories}
-            activeCategory={activeCategory}
-            categoryHref={categoryHref}
-            categoriesAriaLabel={t("categoriesAriaLabel")}
-          />
-
-          <div className={styles.filters} aria-label={t("filtersAriaLabel")}>
-            <SelectField label={t("sortLabel")} name="sort" options={sortOptions} defaultValue={activeSort} />
-            <SelectField label={t("modelLabel")} name="models" options={modelOptions} defaultValue={activeModel} />
-          </div>
-        </div>
-      )}
+      {showNavigationRow && <GalleryToolbar {...gallery} />}
     </header>
   );
 }

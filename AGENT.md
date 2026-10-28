@@ -108,3 +108,30 @@
 - 默认画廊首次显示一个非模态 Base UI Popover，不抢焦点；用户关闭、进入工作台、开始搜索或其他页头任务后记住关闭。筛选/搜索结果页不主动显示。紧凑布局避开导航和筛选。
 - localStorage 仅增加 `aigc:feature:image-to-prompt:v1:dismissed=1`，不保存图片、提示词或身份。支持存储异常降级和跨标签关闭同步。活动截止为北京时间 2026-11-07 00:00；截止后常驻入口可用，NEW 与提示隐藏。
 - 受控 Popover 的 open 属性隐藏不触发 onOpenChange，必须在活动 allowed=false 时记住关闭；其他 Portal 菜单的保护性触发器也不能只依赖 outsidePress。
+
+## 2026-10-27 网站同页提示词创作
+
+- 最新网站视觉与交互基准为 `docs/reference/ui/idea-to-prompt/2026-10-26/12-首页柔和圆角-提示词创作-v5.png` 与 `08-网站同页图库与聊天-v2.png`，替代网站旧页头反推入口/上新气泡与上传工作台。保留原 Logo、头部「提示词创作」、无页头横线、上提的28px圆角输入；搜索在图库分类/筛选栏。旧组件保留兼容测试，不恢复重复入口。
+- `features/prompt-creation` 承载统一输入、私密工作流、同页聊天、双语版本卡与历史；通过 `CreationGallery` 向原图库提供 slots，公开 SSR/SEO、详情、过滤参数与无限分页不移入聊天。默认桌面五列，展开后三列图库/约40%聊天，窄屏纵向且两列图库。
+- 连续追问使用真实 `prompt-conversations` 服务端会话；每轮父任务与人工编辑 revision 由服务端校验并冻结上下文。BFF 沿用 HttpOnly、Origin 写保护、私有 no-store、有界流和受控错误。图库只提交公开 prompt_id，由后端受控 COS 导入，不接受任意图片 URL。
+- 选图不上传，显式发送才创建任务。创建响应不确定时沿用原 key 与 asset；查询不创建模型任务，unknown只查询，failed/canceled可主动重试。旧任务归一为单轮历史；旧 analysis 历史排除 chat，旧单轮删除 chat 返回409 CONVERSATION_MANAGED，新对话删除清整组。根任务30天期限不可被续写延长。
+- Provider 位于查询 Suspense 外，收起/搜索保持草稿；退出、401或账号切换清理私密状态并栅栏晚到请求。未保存编辑在新建/历史/跨pathname链接和离开前保护；确认位于聊天/历史公共区域。内存状态不写浏览器持久化。
+- 技术栈沿用 Next16.4.2/React19/TypeScript/next-intl/Base UI/Lucide/CSS Modules；后端 FastAPI/PostgreSQL/Redis/SQLAlchemy/Alembic/独立Worker。迁移 `27f86a5d9c10` 依赖文字迁移 `f15c86be7423`，发布前需审阅执行；本轮无生产迁移/部署或真实模型验收，小程序实现未变。
+- 完整实现、测试层级与运行命令见上述目录的 `网站实现与本地验证记录-v1.md`；最终检查数字见 PROGRESS 最新条目。
+- 输入框不显示手动resize角或粘贴提示文案，粘贴/拖图能力保留。自动高度由CSS min/max及 `use-textarea-size` 测量决定，上限208px，宽度变化重测、清空缩回；桌面Enter发送/Shift+Enter换行，Ctrl/⌘+Enter兼容，触屏Enter换行/按钮发送，IME与重复按键不提交。侧栏约240ms、局部反馈140–180ms，尊重减少动画；不得为退出动画缓存卸载的私密节点。
+- 本地真实联调可通过仅服务端 `PROMPT_CREATION_API_BASE_URL` 将创作BFF指向8040，其余图库/登录/收藏保持 `API_BASE_URL` 的真实服务。配套后端本地入口与Worker使用独立预览库、Redis12及真实COS/模型，逐次经原 `/api/auth/me` 验证用户；不搬生产JWT密钥、不使用fixture、不为本地预览迁移线上数据库。启动方式见后端 `docs/image-to-prompt.md` 的本地真实创作节。未设置此变量时仍沿用原单上游配置，不能误把旧后端404认成记录到期。
+
+## 2026-10-28 网站闲聊
+
+- 首页与侧栏统一“发送”、默认auto，由现有后端同次模型调用选择普通回答或提示词。首页曾强制generate导致“你好”变提示词，已移除该入口差异。模式作为workflow.send参数冻结到PendingSend，首次匿名登录恢复和同key重试保留模式；401/切账号仍清旧私密发送，不自动恢复旧账号请求。
+- 会话专用BFF白名单解析response_type、assistant_reply、prompt_number：三字段全有或全缺（旧兼容）；未知类型、超长正文、混合提示词/正文、非成功assistant、非法编号拒绝。旧单次analysis解析器不放宽，认证/Origin/no-store/响应体上限不变。
+- 普通回答用现有主题的React纯文本正文，不渲染HTML/Markdown，不显示中英、编辑、画面拆解或提示词版本。prompt_number给提示词卡编号，原version仍是消息顺序；最近提示词不会因之后普通回答自动收起。未生成提示词前隐藏换风格/构图快捷建议，历史显示对话轮次。
+- 沿用既有组件、Base UI、Lucide、CSS Modules及深浅主题，无新UI依赖。小程序与首页布局不改。本地.env.local仅补服务端PROMPT_CREATION_API_BASE_URL=http://127.0.0.1:8040，其余真实图库/Google登录继续使用原API；正式网站未部署。
+
+
+## 2026-10-28 图库局部加载
+
+- 分类、排序、模型、查询及页码的Suspense key仅放在feed slot，GalleryRoute外层仅按locale标识。页头、创作输入、工具栏及聊天必须在feed边界外；不要再把完整GalleryLoading与查询key绑定，导致筛选整页变骨架。
+- HomeContent并行启动公开feed，仅等待categories/user/models返回页面壳；FeedContent继续服务端流式输出作品与分页锚点。GalleryFeed负责分页/错误/空状态，筛选或服务端快照变化重建并取消旧请求，展示compact变化不清已加载页。
+- CreationGalleryFeed/Skeleton复用同一CreationProvider，聊天展开桌面骨架3列、手机2列。筛选导航期间草稿与聊天保留，不为平滑退出缓存旧账号私密节点。
+- 慢响应验证使用隔离fixture精确feed gate，不调用模型；首屏/直达分类仍需验证原始HTML作品。计划见docs/superpowers/plans/2026-10-28-gallery-local-loading.md。

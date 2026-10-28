@@ -7,6 +7,7 @@
 }
 
 .desktopGrid { grid-template-columns: 299fr 279fr 262fr 280fr 294fr; }
+.compactGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); padding-inline: 24px; }
 .mobileGrid { display: none; }
 .column { display: flex; min-width: 0; flex-direction: column; }
 

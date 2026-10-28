@@ -4,7 +4,10 @@ import Home from "./page";
 async function renderHome(props: Parameters<typeof Home>[0]) {
   const boundary = await Home(props);
   const content = boundary.props.children;
-  return content.type(content.props);
+  const shell = await content.type(content.props);
+  const suspendedFeed = shell.props.feedContent.props.children;
+  const feed = await suspendedFeed.type(suspendedFeed.props);
+  return { ...shell, props: { ...shell.props, ...feed.props } };
 }
 const api = vi.hoisted(() => ({
   getCategories: vi.fn(), getModels: vi.fn(), getPromptFeed: vi.fn(), searchPrompts: vi.fn(),
@@ -12,7 +15,7 @@ const api = vi.hoisted(() => ({
 vi.mock("@/lib/api/client", () => api);
 vi.mock("@/lib/auth/session", () => ({ getSessionUser: async () => null }));
 vi.mock("next-intl/server", () => ({ setRequestLocale: vi.fn() }));
-vi.mock("@/features/gallery/components/gallery-page", () => ({ GalleryPage: () => null }));
+vi.mock("@/features/prompt-creation/components/creation-gallery", () => ({ CreationGallery: () => null, CreationGalleryFeed: () => null, CreationGallerySkeleton: () => null }));
 beforeEach(() => {
   api.getCategories.mockResolvedValue([]);
   api.getPromptFeed.mockResolvedValue({ items: [], has_more: false });

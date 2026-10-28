@@ -1,0 +1,9 @@
+.toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 0 34px 10px 22px; min-width: 0; }
+.controls { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 0; }
+.searchSlot { width: clamp(190px, 17vw, 280px); min-width: 0; }
+.filters { display: flex; flex-shrink: 0; gap: 10px; }
+.compact { grid-template-columns: minmax(0, 1fr); gap: 2px; padding-inline: 12px 24px; }
+.compact .searchSlot { flex: 1; width: auto; }
+.compact .controls { padding-left: 12px; }
+@media (max-width: 1200px) { .toolbar { grid-template-columns: minmax(0, 1fr); gap: 2px; padding-inline: 12px 24px; } .searchSlot { width: min(280px, 45vw); } }
+@media (max-width: 680px) { .toolbar { padding: 0 16px 10px; gap: 4px; } .controls { flex-wrap: wrap; gap: 8px; } .searchSlot { flex: 1 1 100%; width: 100%; } .filters { margin-left: auto; gap: 6px; } .compact .controls { padding-left: 0; } }

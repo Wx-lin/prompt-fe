@@ -64,6 +64,11 @@ beforeEach(() => { vi.mocked(getSessionToken).mockResolvedValue("private-session
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe("private image-to-prompt BFF", () => {
+  it("preserves the safe conversation-managed guard on legacy single-turn deletion", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ success: false, data: null, error: { code: "CONVERSATION_MANAGED", message: "private conversation details" }, request_id: "backend-1" }, { status: 409 })));
+    const body = await expectError(await remove(incoming("DELETE"), context()), 409, "CONVERSATION_MANAGED");
+    expect(JSON.stringify(body)).not.toContain("private conversation details");
+  });
   it("requires a cookie session for every private method", async () => {
     vi.mocked(getSessionToken).mockResolvedValue(null);
     const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);

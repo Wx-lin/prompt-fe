@@ -23,3 +23,11 @@ it("shows responsive placeholders with one accessible loading status and no empt
   expect(screen.queryByRole("link")).not.toBeInTheDocument();
   expect(screen.queryByText("emptyDefault")).not.toBeInTheDocument();
 });
+
+it("limits the local loading layout to three desktop columns beside an open chat", () => {
+  const { container } = render(<GallerySkeleton compact />);
+  expect(container.querySelector('[data-layout="desktop"]')?.children).toHaveLength(3);
+  expect(container.querySelector('[data-layout="mobile"]')?.children).toHaveLength(2);
+  expect(screen.getAllByTestId("gallery-skeleton-card")).toHaveLength(20);
+  expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+});
