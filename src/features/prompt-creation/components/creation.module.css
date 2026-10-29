@@ -27,7 +27,7 @@
 .removeImage { position: absolute; top: -7px; right: -7px; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 2px solid var(--color-surface); border-radius: 50%; color: var(--color-action-text); background: var(--color-action); cursor: pointer; }
 .error { margin: 10px 0; color: var(--color-text); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .errorActions { display: flex; gap: 10px; align-items: center; margin: 7px 0; flex-wrap: wrap; }
-.panel { height: 100%; min-height: 460px; display: flex; flex-direction: column; min-width: 0; background: var(--color-page); color: var(--color-text); }
+.panel { height: 100%; min-height: 0; display: flex; flex-direction: column; min-width: 0; background: var(--color-page); color: var(--color-text); }
 .panelHeader { display: flex; align-items: center; gap: 8px; min-height: 58px; padding: 6px 20px; border-bottom: 1px solid var(--color-border); }
 .panelHeader h2 { margin: 0 auto 0 0; font-size: 17px; font-weight: 600; }
 .iconButton { min-height: 36px; padding: 4px 6px; border: 0; background: transparent; color: var(--color-text); white-space: nowrap; }
@@ -83,4 +83,9 @@
   .panelHeader h2 { font-size: 15px; }
   .panelFooter { padding-left: 14px; padding-right: 14px; }
   .panel { min-height: 0; height: 100%; }
+}
+
+/* Keep controls reachable when the viewport is short and an image is attached. */
+@media (max-height: 560px) {
+  .followupComposer .idea { max-height: clamp(48px, calc(100dvh - 350px), 208px); }
 }

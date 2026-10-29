@@ -26,17 +26,15 @@ export function useTextareaSize(ref: RefObject<HTMLTextAreaElement | null>, valu
   useLayoutEffect(() => {
     const textarea = ref.current;
     if (!textarea) return;
-    if (typeof ResizeObserver === "undefined") {
-      const resize = () => fitTextarea(textarea);
-      window.addEventListener("resize", resize);
-      return () => window.removeEventListener("resize", resize);
-    }
+    const resize = () => fitTextarea(textarea);
+    window.addEventListener("resize", resize);
+    if (typeof ResizeObserver === "undefined") return () => window.removeEventListener("resize", resize);
     let width = -1;
     const observer = new ResizeObserver(entries => {
       const nextWidth = entries[0]?.contentRect.width;
       if (nextWidth !== undefined && nextWidth !== width) { width = nextWidth; fitTextarea(textarea); }
     });
     observer.observe(textarea);
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); window.removeEventListener("resize", resize); };
   }, [ref]);
 }

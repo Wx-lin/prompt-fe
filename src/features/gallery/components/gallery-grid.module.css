@@ -30,3 +30,9 @@
   .desktopGrid { display: none; }
   .mobileGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 8px 16px 28px; gap: 10px; }
 }
+
+/* A narrow split workspace has room for the existing two-column layout. */
+@media (min-width: 901px) and (max-width: 1200px) {
+  .compactGrid { display: none; }
+  .compactGrid + .mobileGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 8px 16px 28px; gap: 10px; }
+}
