@@ -12,7 +12,7 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 90
     env:
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
@@ -57,14 +57,16 @@ jobs:
           mkdir -p runtime/app/.next
           cp -a .next/standalone/. runtime/app/
           cp -a .next/static runtime/app/.next/static
-          cp -a public runtime/app/public
+          # Use committed files from the exact release revision, and carry them only once.
+          test ! -e runtime/app/public
+          git archive "$GITHUB_SHA" public | tar -xf - -C runtime/app/
           if find runtime -type l -print -quit | grep -q .; then
             echo 'Runtime contains symlinks; release rejected'
             exit 1
           fi
           test -f runtime/app/server.js
           tar -czf release/runtime.tar.gz -C runtime .
-          git archive "$GITHUB_SHA" Dockerfile .dockerignore .gitignore package.json package-lock.json next.config.ts tsconfig.json eslint.config.mjs messages public src deploy docs/user-guide.md | gzip > release/source.tar.gz
+          git archive "$GITHUB_SHA" Dockerfile .dockerignore .gitignore package.json package-lock.json next.config.ts tsconfig.json eslint.config.mjs messages src deploy docs/user-guide.md | gzip > release/source.tar.gz
           du -b release/runtime.tar.gz release/source.tar.gz
           cp deploy/update-frontend.sh release/update-frontend.sh
           (cd release && sha256sum runtime.tar.gz source.tar.gz update-frontend.sh > checksums.txt)

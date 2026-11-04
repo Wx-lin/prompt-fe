@@ -65,6 +65,11 @@ for name in ("runtime", "source"):
         archive.extractall(target, filter="data")
 PY_ARCHIVE
 test -f "$incoming/runtime/app/server.js"
+# public is archived only in runtime; reconstruct the identical committed tree
+# before rsync --delete can touch the saved frontend source directory.
+test -d "$incoming/runtime/app/public"
+[[ ! -e "$incoming/source/public" ]] || { echo 'Unexpected public directory in source archive'; exit 1; }
+cp -a "$incoming/runtime/app/public" "$incoming/source/public"
 node_major=$(sudo -n docker run --rm --entrypoint node "$current" -p 'process.versions.node.split(".")[0]')
 [[ "$node_major" == 24 ]] || { echo 'Existing runtime must use Node 24'; exit 1; }
 candidate="aigc-frontend:$release"
