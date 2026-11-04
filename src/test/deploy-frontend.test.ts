@@ -121,7 +121,8 @@ it('uploads only committed production source, excluding reference screenshots', 
   const archiveLine = workflow.split('\n').find((line) => line.includes('git archive'))!;
   expect(archiveLine).toContain('git archive "$GITHUB_SHA"');
   for (const path of ['Dockerfile', '.dockerignore', 'package-lock.json', 'next.config.ts', 'messages', 'public', 'src', 'deploy']) expect(archiveLine).toContain(path);
-  expect(archiveLine).not.toContain('docs');
+  expect(archiveLine).toContain('docs/user-guide.md');
+  expect(archiveLine).not.toContain('docs/reference');
   expect(archiveLine).not.toContain('e2e');
   expect(workflow).toContain('du -b release/runtime.tar.gz release/source.tar.gz');
 });

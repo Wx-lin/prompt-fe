@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@base-ui/react/button";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { Tabs } from "@base-ui/react/tabs";
-import { Check, ChevronDown, CircleAlert, Copy, FileText, LoaderCircle, Pencil, RefreshCw } from "lucide-react";
+import { Check, ChevronDown, CircleAlert, Copy, FileText, Pencil, RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ConversationTurn, PromptConversationDetail } from "@/types/prompt-conversation";
 import type { ConversationState, ConversationWorkflow } from "../lib/workflow";
 import styles from "./result.module.css";
+import { CreationImage } from "./creation-image";
+import { CreationImageLoading } from "./creation-image-loading";
 
 type Language = "zh" | "en";
 type CopyFeedback = { id: string; revision: number; language: Language; text: string; success: boolean; conversation: PromptConversationDetail };
@@ -17,11 +19,13 @@ type Props = { turn: ConversationTurn; isLatest: boolean; isLatestPrompt?: boole
 function CreationJobState({ turn, isLatest, workflow, state }: Pick<Props, "turn" | "isLatest" | "workflow" | "state">) {
   const t = useTranslations("promptCreation");
   const busy = state.phase !== "idle" || state.saving;
+  if ((turn.status === "queued" || turn.status === "running") && turn.generation_mode === "image") {
+    return <CreationImageLoading status={turn.status} createdAt={turn.created_at} />;
+  }
   return <div className={styles.jobState}>
-    {["queued", "running"].includes(turn.status) ? <>
-      <div role="status" className={styles.stateTitle}><LoaderCircle className={styles.spinner} size={20} aria-hidden="true" />{t(turn.status === "queued" ? "queued" : "running")}</div>
-      <p>{t("processingHint")}</p><div className={styles.skeleton} aria-hidden="true"><span /><span /><span /></div>
-    </> : <>
+    {["queued", "running"].includes(turn.status) ?
+      <div role="status" className={styles.thinking}>{t(turn.status === "queued" ? "thinkingQueued" : "thinking")}<span className={styles.thinkingDots} aria-hidden="true"><span /><span /><span /></span></div>
+    : <>
       <p className={styles.stateTitle}><CircleAlert size={18} aria-hidden="true" />{t(turn.status === "unknown" ? "unknown" : turn.status === "canceled" ? "canceled" : "failed")}</p>
       {turn.status === "unknown" && <p>{t("unknownHint")}</p>}
       {isLatest && ["failed", "canceled"].includes(turn.status) && <Button className={styles.secondaryButton} disabled={busy || Boolean(state.edit)} onClick={() => void workflow.retryTurn(turn.id)}><RefreshCw size={15} aria-hidden="true" />{t("retry")}</Button>}
@@ -77,6 +81,7 @@ export function CreationResult({ turn, isLatest, isLatestPrompt = isLatest, imag
     setFeedback({ id: turn.id, revision: turn.revision, language: currentLanguage, text: displayText, success, conversation });
   }
 
+  if (turn.status === "succeeded" && turn.response_type === "image") return <CreationImage turn={turn} workflow={workflow} />;
   if (!ready) return <CreationJobState turn={turn} isLatest={isLatest} workflow={workflow} state={state} />;
   const number = turn.prompt_number ?? turn.version;
   return <Collapsible.Root className={styles.card} open={open} onOpenChange={value => setDisclosure({ id: turn.id, open: value })}>

@@ -36,15 +36,10 @@
 }
 
 .model { margin: 2px 0 0; color: var(--color-text-muted); font-size: 11px; line-height: 1.4; }
-.referenceAction { position: absolute; z-index: 1; right: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 7px 12px; border: 1px solid rgb(255 255 255 / 30%); border-radius: 22px; background: rgb(23 23 23 / 65%); color: #fff; font: inherit; font-size: 12px; cursor: pointer; opacity: 0; backdrop-filter: blur(10px); }
-.card:hover .referenceAction, .card:focus-within .referenceAction, .referenceSelected .referenceAction { opacity: 1; }
-.referenceAction:focus-visible { outline: 2px solid var(--color-action-text); outline-offset: 3px; }
 .referenceLabel { position: absolute; top: 10px; left: 10px; z-index: 1; padding: 5px 9px; border-radius: 16px; color: #fff; background: rgb(23 23 23 / 65%); font-size: 11px; pointer-events: none; }
 .referenceSelected .artworkFrame { outline: 1px solid var(--color-text-muted); outline-offset: -1px; }
-.creationCard .cardActions { bottom: 56px; }
 .creationCard .overlayCaption { display: none; }
 .card:hover .referenceLabel, .card:focus-within .referenceLabel { opacity: 0; }
-@media (hover: none) { .referenceAction { opacity: 1; } }
 
 .hoverTools {
   position: absolute;
@@ -109,28 +104,34 @@
   font-size: 13px;
 }
 
-.cardActions { position: absolute; right: 13px; bottom: 12px; left: 13px; display: flex; gap: 9px; }
+.cardActions { position: absolute; right: 10px; bottom: 10px; left: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
 
 .viewButton,
-.copyButton {
+.copyButton,
+.referenceAction {
   display: inline-flex;
-  min-width: 0;
-  height: 37px;
+  flex: 1 1 0;
+  min-width: 34px;
+  height: 34px;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  border: 0;
+  padding: 0 5px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 35%);
   border-radius: 22px;
-  background: #fff;
-  color: #171717;
+  background: rgb(23 23 23 / 72%);
+  color: #fff;
   font-size: 12px;
   font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
+  backdrop-filter: blur(10px);
 }
 
-.viewButton { flex: 1 1 auto; }
-.copyButton { flex: 0 0 38%; }
+.viewButton { background: #fff; border-color: #fff; color: #171717; }
+.viewButton:focus-visible, .copyButton:focus-visible, .referenceAction:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 @media (max-width: 680px) {
   .title { font-size: 12px; }
@@ -146,8 +147,15 @@
   .card.previewHover .hoverTools { opacity: 1; }
   .previewHover .hoverTools a,
   .previewHover .hoverTools button { pointer-events: auto; }
-  .cardActions { right: 7px; bottom: 7px; left: 7px; gap: 5px; }
-  .viewButton, .copyButton { height: 32px; font-size: 10px; }
+  .cardActions { right: 5px; bottom: 7px; left: 5px; gap: 3px; flex-wrap: nowrap; }
+  .viewButton, .copyButton, .referenceAction { flex: 1 1 0; min-width: 0; height: 36px; font-size: 10px; padding: 0 3px; }
+}
+
+@media (hover: none) {
+  .hoverTools, .card:hover .hoverTools { opacity: 1; background: linear-gradient(0deg, rgb(0 0 0 / 45%), transparent 30%); }
+  .hoverTools .bookmark, .hoverTools .cardAuthor, .hoverTools .overlayCaption { opacity: 0; pointer-events: none; }
+  .card:has(.hoverTools :focus) .bookmark { opacity: 1; pointer-events: auto; }
+  .cardActions .viewButton, .cardActions .copyButton, .cardActions .referenceAction { min-height: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

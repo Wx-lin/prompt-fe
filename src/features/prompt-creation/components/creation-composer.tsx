@@ -11,7 +11,8 @@ import styles from "./creation.module.css";
 type Props = {
   message: string; previewUrl: string | null; disabled?: boolean; followup?: boolean; phase?: "idle" | "uploading" | "creating";
   onMessage: (message: string) => void; onSelectFile: (file: File) => void; onClearAttachment: () => void;
-  onSend: () => void; onHistory?: () => void; onContinue?: () => void;
+  onSend: () => void; onHistory?: () => void; requiresMessage?: boolean;
+  referenceLoading?: boolean; referenceError?: boolean;
 };
 
 const isTouchInput = () => window.matchMedia?.("(pointer: coarse)").matches ?? false;
@@ -22,7 +23,7 @@ function subscribeInputMode(listener: () => void) {
   return () => media?.removeEventListener("change", listener);
 }
 
-export function CreationComposer({ message, previewUrl, disabled = false, followup = false, phase = "idle", onMessage, onSelectFile, onClearAttachment, onSend, onHistory, onContinue }: Props) {
+export function CreationComposer({ message, previewUrl, disabled = false, followup = false, phase = "idle", onMessage, onSelectFile, onClearAttachment, onSend, onHistory, requiresMessage = false, referenceLoading = false, referenceError = false }: Props) {
   const t = useTranslations("promptCreation");
   const input = useRef<HTMLInputElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
@@ -33,7 +34,7 @@ export function CreationComposer({ message, previewUrl, disabled = false, follow
   const id = useId();
   const placeholder = t(followup ? "followupPlaceholder" : "placeholder");
   const count = Array.from(message).length;
-  const canSend = !disabled && (message.trim().length > 0 || Boolean(previewUrl));
+  const canSend = !disabled && !referenceLoading && count <= 500 && (message.trim().length > 0 || (Boolean(previewUrl) && !requiresMessage));
   useTextareaSize(textarea, message);
   function select(files: File[]) {
     if (disabled || !files.length) return;
@@ -53,9 +54,9 @@ export function CreationComposer({ message, previewUrl, disabled = false, follow
         <Button type="button" className={styles.removeImage} aria-label={t("removeImage")} onClick={onClearAttachment} disabled={disabled}><X size={14} /></Button>
       </div>}
       <textarea ref={textarea} id={id} className={styles.idea} aria-label={placeholder} aria-describedby={`${id}-keyboard`} placeholder={placeholder} value={message} rows={2}
-        disabled={disabled} maxLength={1000}
+        disabled={disabled} maxLength={Math.max(1000, message.length)}
         onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }}
-        onChange={event => onMessage(Array.from(event.target.value).slice(0, 500).join(""))}
+        onChange={event => onMessage(count > 500 ? event.target.value : Array.from(event.target.value).slice(0, 500).join(""))}
         onPaste={event => { const files = Array.from(event.clipboardData.files); if (files.length) { event.preventDefault(); select(files); } }}
         onKeyDown={event => {
           if (event.key !== "Enter" || event.shiftKey || event.altKey || composing.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
@@ -69,7 +70,6 @@ export function CreationComposer({ message, previewUrl, disabled = false, follow
         <Button className={styles.upload} type="button" onClick={() => input.current?.click()} disabled={disabled}><ImagePlus size={18} /><span>{t(followup ? "upload" : "imageToPrompt")}</span></Button>
         <span className={styles.composerSpacer} />
         {count > 0 && <span className={styles.count}>{count}/500</span>}
-        {onContinue && <Button type="button" className={styles.textButton} onClick={onContinue}>{t("continue")}</Button>}
         {onHistory && <Button type="button" className={styles.textButton} onClick={onHistory} aria-label={t("history")}><History size={17} /><span>{t("history")}</span></Button>}
         <Button type="submit" className={styles.send} disabled={!canSend} title={t("sendHint")} aria-label={t("sendFollowup")}>
           {phase !== "idle" ? <LoaderCircle className={styles.spinner} size={17} /> : <><span>{t("sendFollowup")}</span><ArrowUpRight size={17} /></>}
@@ -77,6 +77,9 @@ export function CreationComposer({ message, previewUrl, disabled = false, follow
       </div>
     </form>
     <p id={`${id}-keyboard`} className={styles.keyboardHint}>{t(touch ? "touchHint" : "keyboardHint")}</p>
+    {referenceLoading && <p role="status">{t("referencePromptLoading")}</p>}
+    {referenceError && <p className={styles.error} role="alert">{t("referencePromptFailed")}</p>}
+    {count > 500 && <p className={styles.error} role="alert">{t("referencePromptTooLong")}</p>}
     {invalid && <p className={styles.error} role="alert">{t("imageInvalid")}</p>}
   </div>;
 }

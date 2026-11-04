@@ -8,6 +8,7 @@ import { SiteHeader } from "@/features/gallery/components/site-header";
 import { GalleryFeed } from "./gallery-feed";
 import { GalleryToolbar } from "./gallery-toolbar";
 import { useGalleryLayoutMotion } from "./use-gallery-layout-motion";
+import { ChatPaneResizer } from "./chat-pane-resizer";
 import { isCurrentCategory, legacyCategoryKeys } from "@/features/gallery/data/categories";
 import type { Category, CurrentUser, GalleryCard } from "@/types/prompt";
 import styles from "./gallery-page.module.css";
@@ -57,6 +58,8 @@ export function GalleryPage({
   const tCategories = useTranslations("categories");
   const galleryRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLDivElement | null>(null);
+  const workspaceRef = useRef<HTMLDivElement | null>(null);
+  const chatRef = useRef<HTMLDivElement | null>(null);
   useGalleryLayoutMotion(chatOpen, composerRef, galleryRef);
 
   return (
@@ -72,7 +75,7 @@ export function GalleryPage({
         showNavigationRow={false}
       />
       <div ref={composerRef} className={styles.homeComposer} aria-hidden={chatOpen} inert={chatOpen} style={chatOpen ? { height: 0, opacity: 0 } : undefined}>{creationComposer}</div>
-      <div className={`${styles.workspace} ${chatOpen ? styles.workspaceOpen : ""}`}>
+      <div ref={workspaceRef} data-testid="gallery-workspace" className={`${styles.workspace} ${chatOpen ? styles.workspaceOpen : ""}`}>
       <div ref={galleryRef} className={styles.galleryPane} data-testid="gallery-pane">
       <GalleryToolbar categories={categories} activeCategory={activeCategory} activeSort={activeSort} activeModel={activeModel} models={models} query={query} compact={chatOpen} />
       {!query && <h1 className={styles.pageHeading}>{activeCategory === "all" ? t("seoHeading") : t("categoryHeading", { category: isCurrentCategory(activeCategory) ? tCategories(activeCategory) : activeCategory })}</h1>}
@@ -83,7 +86,7 @@ export function GalleryPage({
         onUseReference={onUseReference} activeReferenceId={activeReferenceId}
       />}
       </div>
-      <div className={styles.chatPane} aria-hidden={!chatOpen} inert={!chatOpen} style={{ visibility: chatOpen ? "visible" : "hidden" }} data-testid="creation-chat-pane">{chatPanel}</div>
+      <div ref={chatRef} className={styles.chatPane} aria-hidden={!chatOpen} inert={!chatOpen} style={{ visibility: chatOpen ? "visible" : "hidden" }} data-testid="creation-chat-pane">{chatOpen && <ChatPaneResizer workspace={workspaceRef} pane={chatRef} label={t("resizeChatPanel")} />}{chatPanel}</div>
       </div>
     </main>
   );

@@ -63,12 +63,8 @@ export function CreationPanel() {
       </div>
       <footer className={styles.panelFooter}>
         {state.error && <div className={styles.error} role="alert"><p>{t(creationErrorKey(state.error))}</p>{state.conversation && <Button className={styles.textButton} onClick={() => { void workflow.refresh(); }}>{t("refresh")}</Button>}</div>}
-        {latestPrompt && !busy && canContinue && !state.edit && <div className={styles.suggestions}>
-          <Button type="button" onClick={() => workflow.setMessage(t("styleDraft"))}>{t("styleSuggestion")}</Button>
-          <Button type="button" onClick={() => workflow.setMessage(t("compositionDraft"))}>{t("compositionSuggestion")}</Button>
-        </div>}
-        <CreationComposer message={state.message} previewUrl={state.previewUrl} followup disabled={busy || !canContinue || Boolean(state.edit)} phase={state.phase}
-          onMessage={workflow.setMessage} onSelectFile={workflow.selectFile} onClearAttachment={workflow.clearAttachment} onSend={() => { void workflow.send(); }} />
+        <CreationComposer message={state.message} previewUrl={state.previewUrl ?? state.generatedImage?.url ?? null} requiresMessage={Boolean(state.generatedImage)} followup disabled={busy || !canContinue || Boolean(state.edit)} phase={state.phase} referenceLoading={state.referenceLoading} referenceError={state.referenceError}
+          onMessage={workflow.setMessage} onSelectFile={workflow.selectFile} onClearAttachment={workflow.clearAttachment} onSend={() => { void workflow.send("smart"); }} />
         <p className={styles.disclaimer}>{t("disclaimer")}</p>
       </footer>
     </>}
@@ -77,12 +73,20 @@ export function CreationPanel() {
 
 export function CreationHomeComposer() {
   const { state, workflow, guard } = useCreation();
+  const home = useRef<HTMLElement>(null);
+  const referenceId = state.source?.promptId;
+  useEffect(() => {
+    if (!referenceId || state.expanded) return;
+    const node = home.current;
+    node?.scrollIntoView?.({ block: "center", behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    node?.querySelector("textarea")?.focus({ preventScroll: true });
+  }, [referenceId, state.expanded]);
   if (state.expanded) return null;
   const latest = state.conversation?.turns.at(-1);
-  const busy = state.phase !== "idle" || state.opening || Boolean(state.edit) || Boolean(latest && latest.status !== "succeeded");
-  return <section className={styles.home}>
-    <CreationComposer message={state.message} previewUrl={state.previewUrl} disabled={busy} phase={state.phase} onMessage={workflow.setMessage}
-      onSelectFile={workflow.selectFile} onClearAttachment={workflow.clearAttachment} onSend={() => { void workflow.send(); }}
-      onHistory={() => guard(() => { void workflow.showHistory(); })} onContinue={state.conversation ? () => { workflow.setExpanded(true); void workflow.refresh(); } : undefined} />
+  const busy = state.phase !== "idle" || state.opening || Boolean(latest && latest.status !== "succeeded");
+  return <section ref={home} className={styles.home} onFocusCapture={(event) => { if ((state.edit || busy) && state.conversation && event.target instanceof HTMLTextAreaElement) workflow.setExpanded(true); }}>
+    <CreationComposer message={state.message} previewUrl={state.previewUrl} disabled={busy && !state.conversation} phase={state.phase} referenceLoading={state.referenceLoading} referenceError={state.referenceError} onMessage={workflow.setMessage}
+      onSelectFile={workflow.selectFile} onClearAttachment={workflow.clearAttachment} onSend={() => { void workflow.send("smart"); }}
+      onHistory={() => guard(() => { void workflow.showHistory(); })} />
   </section>;
 }

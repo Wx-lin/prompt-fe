@@ -1,14 +1,16 @@
 import { validImage } from "@/lib/submissions/validation";
 import { ApiError, asApiError, isAbortError, PROMPT_LIMITS, promptAnalysisClient } from "@/features/image-to-prompt/lib/client";
 import type { AnalysisAsset, BilingualPrompt } from "@/types/prompt-analysis";
-import type { ConversationMode, ConversationTurn, CreateConversationInput, PromptConversationDetail, PromptConversationSummary } from "@/types/prompt-conversation";
+import type { ConversationMode, ConversationTurn, CreateConversationInput, GeneratedImage, PromptConversationDetail, PromptConversationSummary } from "@/types/prompt-conversation";
 import { promptConversationClient, type PromptConversationClient } from "./client";
 
-export type CreationReference = { promptId: string; title: string; imageUrl: string };
+export type CreationReference = { promptId: string; title: string; imageUrl: string; promptText?: string };
 export type ConversationEdit = { turnId: string; language: "zh" | "en"; text: string; original: string; revision: number; prompt: BilingualPrompt };
 export type ConversationState = {
   expanded: boolean; view: "chat" | "history"; message: string; file: File | null;
   source: CreationReference | null; previewUrl: string | null; asset: AnalysisAsset | null;
+  generatedImage: GeneratedImage | null;
+  referenceLoading: boolean; referenceError: boolean;
   conversation: PromptConversationDetail | null; opening: boolean; phase: "idle" | "uploading" | "creating";
   error: ApiError | null; edit: ConversationEdit | null; saving: boolean; saveError: ApiError | null;
   history: PromptConversationSummary[]; historyLoading: boolean; historyError: ApiError | null; hasMore: boolean;
@@ -18,7 +20,7 @@ type Ticket = { epoch: number; controller: AbortController };
 type PendingSend = { key: string; input: CreateConversationInput; conversationId: string | null; parentId?: string; parentRevision?: number };
 type LoginIntent = { kind: "send"; mode: ConversationMode } | { kind: "history" };
 const active = (turn: ConversationTurn | undefined) => turn?.status === "queued" || turn?.status === "running";
-const initial = (): ConversationState => ({ expanded: false, view: "chat", message: "", file: null, source: null, previewUrl: null, asset: null, conversation: null, opening: false, phase: "idle", error: null, edit: null, saving: false, saveError: null, history: [], historyLoading: false, historyError: null, hasMore: false });
+const initial = (): ConversationState => ({ expanded: false, view: "chat", message: "", file: null, source: null, previewUrl: null, asset: null, generatedImage: null, referenceLoading: false, referenceError: false, conversation: null, opening: false, phase: "idle", error: null, edit: null, saving: false, saveError: null, history: [], historyLoading: false, historyError: null, hasMore: false });
 
 /** Private drafts live only in this mounted provider. All continuations use a server-owned parent. */
 export function createConversationWorkflow(options: Options = {}) {
@@ -32,6 +34,7 @@ export function createConversationWorkflow(options: Options = {}) {
   let enabled = true;
   let destroyed = false;
   let preview: string | null = null;
+  let referenceRequest: AbortController | null = null;
   let pendingSend: PendingSend | null = null;
   let retryKey: { id: string; key: string } | null = null;
   let loginIntent: LoginIntent | null = null;
@@ -47,8 +50,10 @@ export function createConversationWorkflow(options: Options = {}) {
   const ticket = () => { const value = { epoch, controller: new AbortController() }; requests.add(value); return value; };
   const current = (value: Ticket) => enabled && !destroyed && value.epoch === epoch && !value.controller.signal.aborted;
   function releasePreview() { if (preview) URL.revokeObjectURL(preview); preview = null; }
+  function cancelReferenceRequest() { referenceRequest?.abort(); referenceRequest = null; }
   function invalidate() {
     epoch += 1;
+    cancelReferenceRequest();
     requests.forEach(request => request.controller.abort());
     requests.clear();
     reading = false;
@@ -93,7 +98,8 @@ export function createConversationWorkflow(options: Options = {}) {
   function apply(value: PromptConversationDetail) {
     const previous = new Map(state.conversation?.id === value.id ? state.conversation.turns.map(turn => [turn.id, turn]) : []);
     const turns = value.turns.map(turn => { const old = previous.get(turn.id); return old && old.revision > turn.revision ? old : turn; });
-    publish({ conversation: { ...value, turns }, error: null });
+    const selected = state.generatedImage && turns.find(turn => turn.generated_image?.id === state.generatedImage?.id)?.generated_image;
+    publish({ conversation: { ...value, turns }, ...(selected ? { generatedImage: selected } : {}), error: null });
     schedulePoll();
   }
   function applyTurn(value: ConversationTurn) {
@@ -120,26 +126,56 @@ export function createConversationWorkflow(options: Options = {}) {
     if (destroyed || busy()) return false;
     pendingSend = null; publish({ ...change, error: null }); return true;
   }
-  function setMessage(message: string) { if (message !== state.message) changeDraft({ message }); }
+  function setMessage(message: string) {
+    if (message !== state.message) {
+      changeDraft({ message, referenceError: false });
+    }
+  }
+  function selectGeneratedImage(image: GeneratedImage) {
+    if (destroyed || busy() || !state.conversation?.turns.some(turn => turn.generated_image?.id === image.id)) return;
+    cancelReferenceRequest(); releasePreview();
+    changeDraft({ generatedImage: image, file: null, source: null, previewUrl: null, asset: null, referenceLoading: false, referenceError: false });
+  }
   function selectFile(file: File) {
     if (destroyed || busy()) return false;
     if (!validImage(file)) { publish({ error: new ApiError(0, "INVALID_IMAGE") }); return false; }
-    releasePreview(); preview = URL.createObjectURL(file);
-    return changeDraft({ file, previewUrl: preview, source: null, asset: null });
+    cancelReferenceRequest(); releasePreview(); preview = URL.createObjectURL(file);
+    return changeDraft({ file, previewUrl: preview, source: null, asset: null, generatedImage: null, referenceLoading: false, referenceError: false });
   }
   function selectReference(source: CreationReference) {
     if (destroyed || busy()) return false;
-    releasePreview();
-    return changeDraft({ expanded: true, view: "chat", source, previewUrl: source.imageUrl, file: null, asset: null });
+    invalidate(); releasePreview();
+    const promptText = source.promptText?.trim() ? source.promptText : null;
+    const changed = changeDraft({ expanded: false, view: "chat", source, previewUrl: source.imageUrl, file: null, asset: null, generatedImage: null, conversation: null, message: promptText ?? "", referenceLoading: !promptText, referenceError: false });
+    if (!changed || promptText) return changed;
+    const controller = new AbortController();
+    referenceRequest = controller;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/prompts/${encodeURIComponent(source.promptId)}`, { signal: controller.signal, cache: "no-store", credentials: "same-origin" });
+        if (!response.ok) throw new Error("Unable to load prompt");
+        const data: unknown = await response.json();
+        if (!data || typeof data !== "object" || !("prompt_text" in data) || typeof data.prompt_text !== "string" || !data.prompt_text.trim()) throw new Error("Invalid prompt");
+        if (referenceRequest === controller && !controller.signal.aborted) {
+          const additions = state.message.trim();
+          publish({ message: additions ? `${data.prompt_text}\n\n${state.message}` : data.prompt_text, referenceLoading: false });
+        }
+      } catch {
+        if (referenceRequest === controller && !controller.signal.aborted) publish({ referenceLoading: false, referenceError: true });
+      } finally {
+        if (referenceRequest === controller) referenceRequest = null;
+      }
+    })();
+    return true;
   }
   function clearAttachment() {
     if (destroyed || busy()) return;
-    releasePreview(); changeDraft({ file: null, source: null, previewUrl: null, asset: null });
+    cancelReferenceRequest(); releasePreview(); changeDraft({ file: null, source: null, previewUrl: null, asset: null, generatedImage: null, referenceLoading: false, referenceError: false });
   }
   async function send(mode: ConversationMode = "auto") {
-    if (!enabled || destroyed || busy() || active(latest())) return;
+    if (!enabled || destroyed || busy() || state.referenceLoading || active(latest())) return;
     const message = state.message.trim();
-    if ((mode !== "auto" && mode !== "generate") || (!message && !state.file && !state.source && !state.asset) || Array.from(message).length > 500) {
+    if ((mode !== "auto" && mode !== "generate" && mode !== "image" && mode !== "smart") || (!message && !state.file && !state.source && !state.asset) || Array.from(message).length > 500) {
       publish({ error: new ApiError(0, "INVALID_REQUEST") }); return;
     }
     if (state.edit) { publish({ error: new ApiError(0, "UNSAVED_EDIT") }); return; }
@@ -152,7 +188,7 @@ export function createConversationWorkflow(options: Options = {}) {
     const conversationId = state.conversation?.id ?? null;
     const parent = latest();
     // Freeze the request intent before uploading; uncertain retries must not change its meaning.
-    pendingSend ??= { key: crypto.randomUUID(), input: { ...(message ? { message } : {}), ...(mode === "generate" ? { mode } : {}) }, conversationId, ...(parent ? { parentId: parent.id, parentRevision: parent.revision } : {}) };
+    pendingSend ??= { key: crypto.randomUUID(), input: { ...(message ? { message } : {}), ...(mode !== "auto" ? { mode } : {}), ...((mode === "image" || mode === "smart") && conversationId && state.generatedImage ? { generated_image_id: state.generatedImage.id } : {}) }, conversationId, ...(parent ? { parentId: parent.id, parentRevision: parent.revision } : {}) };
     publish({ phase: "uploading", error: null });
     try {
       let asset = state.asset;
@@ -168,7 +204,7 @@ export function createConversationWorkflow(options: Options = {}) {
         : await client.create(pending.input, pending.key, request.controller.signal);
       if (!current(request)) return;
       releasePreview(); pendingSend = null; loginIntent = null;
-      publish({ phase: "idle", message: "", file: null, source: null, previewUrl: null, asset: null });
+      publish({ phase: "idle", message: "", file: null, source: null, previewUrl: null, asset: null, generatedImage: null });
       applyTurn(value);
     } catch (error) { if (current(request) && !isAbortError(error)) report(error); }
     finally { requests.delete(request); if (current(request)) publish({ phase: "idle" }); }
@@ -183,7 +219,7 @@ export function createConversationWorkflow(options: Options = {}) {
     invalidate(); releasePreview(); pendingSend = null; retryKey = null;
     publish({ expanded: true, view: "chat", opening: true, conversation: null, edit: null, message: "", file: null, source: null, previewUrl: null, asset: null, error: null, saveError: null });
     const request = ticket(); reading = true;
-    try { const value = await client.detail(id, request.controller.signal); if (current(request)) apply(value); }
+    try { const value = await client.detail(id, request.controller.signal); if (current(request)) { apply(value); publish({ generatedImage: null }); } }
     catch (error) { if (current(request) && !isAbortError(error)) report(error); }
     finally { requests.delete(request); if (request.epoch === epoch) { reading = false; publish({ opening: false }); } }
   }
@@ -261,7 +297,7 @@ export function createConversationWorkflow(options: Options = {}) {
     else schedulePoll();
   }
   function destroy() { if (!destroyed) { invalidate(); releasePreview(); listeners.clear(); destroyed = true; } }
-  return { getSnapshot: () => state, subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; }, setIdentity, setEnabled, setOnUnauthorized: (callback: (() => void) | undefined) => { onUnauthorized = callback; }, setMessage, selectFile, selectReference, clearAttachment, send, refresh, resumeIntent, cancelLogin: () => { loginIntent = null; }, setExpanded: (expanded: boolean) => publish({ expanded }), showHistory, showChat: () => publish({ view: "chat" }), newConversation, openConversation, retryTurn, beginEdit, setEditText, saveEdit, cancelEdit, hasUnsavedEdit, loadHistory, removeConversation, destroy };
+  return { getSnapshot: () => state, subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; }, setIdentity, setEnabled, setOnUnauthorized: (callback: (() => void) | undefined) => { onUnauthorized = callback; }, setMessage, selectGeneratedImage, selectFile, selectReference, clearAttachment, send, refresh, resumeIntent, cancelLogin: () => { loginIntent = null; }, setExpanded: (expanded: boolean) => publish({ expanded }), showHistory, showChat: () => publish({ view: "chat" }), newConversation, openConversation, retryTurn, beginEdit, setEditText, saveEdit, cancelEdit, hasUnsavedEdit, loadHistory, removeConversation, destroy };
 }
 
 export type ConversationWorkflow = ReturnType<typeof createConversationWorkflow>;

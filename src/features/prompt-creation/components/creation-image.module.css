@@ -1,0 +1,15 @@
+.result { width: min(100%, 440px); min-width: 0; }
+.frame { position: relative; overflow: hidden; border-radius: 16px; background: var(--color-hover); }
+.imageTrigger { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.imageTrigger img { display: block; width: 100%; height: auto; max-height: 65vh; object-fit: contain; }
+.edit { position: absolute; bottom: 12px; left: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 0; border-radius: 20px; background: rgba(255,255,255,.94); color: #171717; font: inherit; font-size: 12px; cursor: pointer; opacity: 0; transition: opacity .15s; }
+.frame:hover .edit, .frame:focus-within .edit { opacity: 1; }
+.actions { display: flex; align-items: center; gap: 14px; padding: 9px 4px; color: var(--color-text-muted); font-size: 12px; }
+.actions a { display: inline-flex; color: inherit; }
+.unavailable { padding: 24px; border-radius: 16px; background: var(--color-hover); font-size: 13px; }
+.backdrop { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.8); }
+.dialog { position: fixed; inset: 20px; z-index: 1001; display: grid; place-items: center; outline: none; }
+.dialog img { max-width: 100%; max-height: calc(100vh - 40px); object-fit: contain; border-radius: 8px; }
+.close { position: fixed; z-index: 1; top: 20px; right: 20px; display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(255,255,255,.94); color: #111; cursor: pointer; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (hover: none) { .edit { opacity: 1; } }

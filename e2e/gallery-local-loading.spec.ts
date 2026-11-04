@@ -136,7 +136,7 @@ test("an open conversation and its draft survive feed loading with compact skele
   try {
     await page.goto(`/zh?q=${query}&sort=latest`);
     await expect(cards(page)).toHaveCount(6);
-    await page.getByRole("button", { name: "用《粉色产品摄影参考图 1》的图片创作提示词", exact: true }).filter({ visible: true }).click();
+    await page.getByRole("button", { name: "做《粉色产品摄影参考图 1》同款", exact: true }).filter({ visible: true }).click();
     const panel = page.getByRole("complementary", { name: panelLabel, exact: true });
     const input = panel.getByRole("textbox", { name: followupInput, exact: true });
     await expect(panel).toBeVisible();

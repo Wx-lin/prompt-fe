@@ -5,6 +5,7 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  outputFileTracingIncludes: { "/*/guide": ["./docs/user-guide.md"] },
   // Playwright's baseURL uses 127.0.0.1; without this Next's dev-origin check
   // blocks HMR/client resources from that origin and breaks hydration.
   allowedDevOrigins: ["127.0.0.1", "localhost"],

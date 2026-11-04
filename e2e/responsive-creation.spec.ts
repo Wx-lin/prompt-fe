@@ -1,7 +1,15 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-const homeInput = "说说你的想法，帮你写成提示词";
+const homeInput = "描述想生成的画面，或直接聊天";
 const followupInput = "继续提问或描述想法，也可以添加参考图";
+
+async function openPanel(page: Page) {
+  const input = page.getByRole("textbox", { name: homeInput, exact: true });
+  await input.fill("测试创作");
+  await page.getByRole("button", { name: "发送", exact: true }).click();
+  await page.getByRole("link", { name: "关闭登录", exact: true }).click();
+  await expect(page.getByRole("complementary", { name: "提示词创作对话" })).toBeVisible();
+}
 
 for (const width of [390, 900, 901, 1024, 1190, 1279, 1280]) {
   for (const colorScheme of ["light", "dark"] as const) {
@@ -12,9 +20,7 @@ for (const width of [390, 900, 901, 1024, 1190, 1279, 1280]) {
         route.request().method() === "POST" ? route.abort() : route.continue());
       await page.goto("/");
       const gallery = page.getByTestId("gallery-pane");
-      const reference = page.getByRole("button", { name: /图片创作提示词/ }).filter({ visible: true }).first();
-      await expect(reference).toBeVisible();
-      await reference.dispatchEvent("click");
+      await openPanel(page);
       const pane = page.getByTestId("creation-chat-pane");
       const panel = page.getByRole("complementary", { name: "提示词创作对话" });
       await expect(panel).toBeVisible();
@@ -48,8 +54,7 @@ test("resizing around the split boundary preserves the draft and keeps controls 
   await page.setViewportSize({ width: 1201, height: 600 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  const reference = page.getByRole("button", { name: /图片创作提示词/ }).filter({ visible: true }).first();
-  await reference.dispatchEvent("click");
+  await openPanel(page);
   const pane = page.getByTestId("creation-chat-pane");
   const gallery = page.getByTestId("gallery-pane");
   const panel = page.getByRole("complementary", { name: "提示词创作对话" });
@@ -75,9 +80,8 @@ test("split panel stays usable after scrolling with normal motion", async ({ pag
   await page.setViewportSize({ width: 1024, height: 600 });
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
-  const reference = page.getByRole("button", { name: /图片创作提示词/ }).filter({ visible: true }).first();
   await page.evaluate(() => window.scrollTo(0, 350));
-  await reference.dispatchEvent("click");
+  await openPanel(page);
   const panel = page.getByRole("complementary", { name: "提示词创作对话" });
   const pane = page.getByTestId("creation-chat-pane");
   const gallery = page.getByTestId("gallery-pane");
@@ -98,7 +102,8 @@ test("long drafts with a reference image fit a short window and stay scrollable 
   await page.setViewportSize({ width: 901, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.getByRole("button", { name: /图片创作提示词/ }).filter({ visible: true }).first().dispatchEvent("click");
+  await openPanel(page);
+  await page.getByRole("complementary", { name: "提示词创作对话" }).locator('input[type="file"]').setInputFiles("e2e/fixtures/submission.png");
   const panel = page.getByRole("complementary", { name: "提示词创作对话" });
   const input = panel.getByRole("textbox", { name: followupInput, exact: true });
   const draft = "雨夜的猫和花店的画面十分温暖\n".repeat(20);
@@ -129,7 +134,8 @@ for (const width of [320, 390]) test(`long draft with reference remains usable o
   await home.fill("测试");
   await expect(page.getByRole("button", { name: "发送", exact: true })).toBeEnabled();
   await home.clear();
-  await page.getByRole("button", { name: /图片创作提示词/ }).filter({ visible: true }).first().dispatchEvent("click");
+  await openPanel(page);
+  await page.getByRole("complementary", { name: "提示词创作对话" }).locator('input[type="file"]').setInputFiles("e2e/fixtures/submission.png");
   const panel = page.getByRole("complementary", { name: "提示词创作对话" });
   const input = panel.getByRole("textbox", { name: followupInput, exact: true });
   await input.fill("雨夜猫咪\n".repeat(50));

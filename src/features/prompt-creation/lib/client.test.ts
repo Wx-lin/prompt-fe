@@ -10,6 +10,14 @@ const ok = (data: unknown, status = 200) => Response.json({ success: true, data,
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("private prompt conversation browser client", () => {
+  it("passes the unified mode and selected generated image to the API", async () => {
+    const fetcher = vi.fn().mockResolvedValue(ok({ id: ID }, 202));
+    vi.stubGlobal("fetch", fetcher);
+    const input = { message: "改成蓝色", mode: "smart" as const, generated_image_id: ASSET, parent_analysis_id: PARENT, parent_revision: 0 };
+    await promptConversationClient.send(ID, input, KEY);
+    expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual(input);
+    await expect(promptConversationClient.send(ID, { ...input, asset_id: ASSET }, KEY)).rejects.toMatchObject({ code: "INVALID_REQUEST" });
+  });
   it("preserves explicit response modes and rejects unknown modes before fetching", async () => {
     const fetcher = vi.fn().mockImplementation(() => Promise.resolve(ok({ id: ID }, 202)));
     vi.stubGlobal("fetch", fetcher);

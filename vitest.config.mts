@@ -14,6 +14,9 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     exclude: ["e2e/**", "node_modules/**", "test-results/**"],
+    // Keep the full suite reliable on developer machines running other services.
+    maxWorkers: 4,
+    testTimeout: 15000,
     coverage: {
       provider: "v8",
       include: ["src/lib/seo/**/*.ts", "src/app/sitemap.ts", "src/lib/api/client.ts", "src/lib/theme/**/*.ts", "src/features/gallery/lib/**/*.ts", "src/features/search/lib/**/*.ts", "src/lib/prompt-analysis/**/*.ts", "src/features/image-to-prompt/**/*.{ts,tsx}", "src/features/prompt-creation/**/*.{ts,tsx}", "src/app/api/prompt-conversations/**/route.ts", "src/app/api/prompt-analyses/**/route.ts", "src/app/api/prompt-assets/**/route.ts", "src/app/api/prompt-examples/route.ts"],

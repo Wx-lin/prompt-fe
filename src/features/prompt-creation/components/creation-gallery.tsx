@@ -13,14 +13,14 @@ export function CreationGallery(props: Props) {
   const identity = props.user?.id ?? null;
   useLayoutEffect(() => { syncIdentity(identity); }, [identity, syncIdentity]);
   return <GalleryPage {...props} creationComposer={<CreationHomeComposer />} chatPanel={state.expanded ? <CreationPanel /> : null} chatOpen={state.expanded}
-    activeReferenceId={state.source?.promptId} onUseReference={reference => guard(() => { workflow.selectReference({ promptId: reference.id, title: reference.title, imageUrl: reference.image }); })} />;
+    activeReferenceId={state.source?.promptId} onUseReference={reference => guard(() => { workflow.selectReference({ promptId: reference.id, title: reference.title, imageUrl: reference.image, promptText: reference.promptText }); })} />;
 }
 
 /** These client adapters keep live creation controls around server-rendered public feed data. */
 export function CreationGalleryFeed(props: Omit<GalleryFeedProps, "compact" | "onUseReference" | "activeReferenceId">) {
   const { state, workflow, guard } = useCreation();
   return <GalleryFeed {...props} compact={state.expanded} activeReferenceId={state.source?.promptId}
-    onUseReference={reference => guard(() => { workflow.selectReference({ promptId: reference.id, title: reference.title, imageUrl: reference.image }); })} />;
+    onUseReference={reference => guard(() => { workflow.selectReference({ promptId: reference.id, title: reference.title, imageUrl: reference.image, promptText: reference.promptText }); })} />;
 }
 
 export function CreationGallerySkeleton() {

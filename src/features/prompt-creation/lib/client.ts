@@ -11,11 +11,12 @@ function requireId(id: string) {
 function inputBody(input: CreateConversationInput): CreateConversationInput {
   const message = typeof input.message === "string" ? input.message.trim() : undefined;
   if ((input.message !== undefined && (typeof input.message !== "string" || !message || Array.from(message).length > 500)) ||
-    (input.mode !== undefined && input.mode !== "auto" && input.mode !== "generate") ||
-    (input.asset_id !== undefined && !validId(input.asset_id)) || (!message && !input.asset_id)) {
+    (input.mode !== undefined && input.mode !== "auto" && input.mode !== "generate" && input.mode !== "image" && input.mode !== "smart") ||
+    (input.asset_id !== undefined && !validId(input.asset_id)) ||
+    (input.generated_image_id !== undefined && (!validId(input.generated_image_id) || (input.mode !== "image" && input.mode !== "smart") || input.asset_id !== undefined)) || (!message && !input.asset_id)) {
     throw new ApiError(0, "INVALID_REQUEST");
   }
-  return { ...(message ? { message } : {}), ...(input.asset_id ? { asset_id: input.asset_id } : {}), ...(input.mode ? { mode: input.mode } : {}) };
+  return { ...(message ? { message } : {}), ...(input.asset_id ? { asset_id: input.asset_id } : {}), ...(input.generated_image_id ? { generated_image_id: input.generated_image_id } : {}), ...(input.mode ? { mode: input.mode } : {}) };
 }
 function keyed(key: string) {
   if (!validId(key)) throw new ApiError(0, "INVALID_IDEMPOTENCY_KEY");

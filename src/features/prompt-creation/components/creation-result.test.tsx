@@ -41,14 +41,54 @@ async function setup(options: { turn?: ConversationTurn; turns?: ConversationTur
 }
 
 describe("version-specific creation result", () => {
+  it("shows a generated image inline and allows enlarging and editing it", async () => {
+    const generated_image = { id: "00000000-0000-4000-8000-000000000003", url: "https://images.example.com/cat.png", expires_at: DATE, width: 1024, height: 1024 };
+    const { user, workflow } = await setup({ turn: { ...base, response_type: "image", generated_image, prompt: null, result: null, assistant_reply: null, prompt_number: null } as never });
+    expect(screen.getByAltText("生成的图片")).toHaveAttribute("src", generated_image.url);
+    await user.click(screen.getByRole("button", { name: "放大图片" }));
+    expect(screen.getByRole("dialog")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "关闭" }));
+    await user.click(screen.getByRole("button", { name: "编辑图片" }));
+    expect(workflow.getSnapshot().generatedImage?.id).toBe(generated_image.id);
+    expect(screen.getByRole("link", { name: "下载图片" })).toHaveAttribute("href", `/api/prompt-conversations/${ID}/images/${generated_image.id}/download`);
+  });
+
+  it("allows refreshing a temporarily unavailable generated image", async () => {
+    const { client, user } = await setup({ turn: { ...base, response_type: "image", image_status: "temporarily_unavailable", generated_image: null, prompt: null, result: null, assistant_reply: null, prompt_number: null } as never });
+    expect(screen.getByText("图片暂时无法显示，请刷新后重试。")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "查询状态" }));
+    expect(client.detail).toHaveBeenCalledTimes(2);
+  });
   it("keeps queued and running output neutral without a premature prompt version card", async () => {
     await setup({ turn: { ...base, status: "queued", phase: "queued", prompt: null, result: null, saved_to_history: false, response_type: null, assistant_reply: null, prompt_number: null } });
-    expect(screen.getByRole("status")).toHaveTextContent("处理中");
+    expect(screen.getByRole("status")).toHaveTextContent("排队中");
+    expect(screen.queryByText("可以继续逛图，稍后从历史查看。")).not.toBeInTheDocument();
+    expect(document.querySelector('[class*="skeleton"]')).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /版本/ })).not.toBeInTheDocument();
     cleanup();
     await setup({ turn: { ...base, status: "running", phase: "running", prompt: null, result: null, saved_to_history: false, response_type: null, assistant_reply: null, prompt_number: null } });
-    expect(screen.getByRole("status")).toHaveTextContent("正在回复");
+    expect(screen.getByRole("status")).toHaveTextContent("正在思考中");
+    expect(screen.queryByText("可以继续逛图，稍后从历史查看。")).not.toBeInTheDocument();
+    expect(document.querySelector('[class*="skeleton"]')).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /版本/ })).not.toBeInTheDocument();
+  });
+
+  it("shows a square estimated-progress placeholder instead of text skeletons while generating an image", async () => {
+    const turn = { ...base, status: "running", generation_mode: "image", phase: "running", prompt: null, result: null, saved_to_history: false, response_type: null, assistant_reply: null, prompt_number: null } as ConversationTurn;
+    await setup({ turn });
+    const progress = screen.getByRole("progressbar", { name: "预计生成进度" });
+    expect(progress).toHaveAttribute("aria-valuemax", "100");
+    expect(progress).toHaveAttribute("aria-valuetext", expect.stringContaining("预计"));
+    expect(progress).toHaveTextContent(/^\d+%$/);
+    expect(screen.queryByText("可以继续逛图，稍后从历史查看。")).not.toBeInTheDocument();
+  });
+
+  it("shows the image placeholder without a fabricated percentage while queued", async () => {
+    const turn = { ...base, status: "queued", generation_mode: "image", phase: "queued", prompt: null, result: null, saved_to_history: false, response_type: null, assistant_reply: null, prompt_number: null } as ConversationTurn;
+    await setup({ turn });
+    expect(screen.getByRole("status")).toHaveTextContent("排队中");
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.queryByText(/\d+%/)).not.toBeInTheDocument();
   });
 
   it("opens the latest version with bilingual output and copies its selected language", async () => {
@@ -160,7 +200,7 @@ describe("version-specific creation result", () => {
 
   it.each(["queued", "running"] as const)("shows actual %s state without fake output or percentages", async status => {
     await setup({ turn: { ...base, status, result: null, prompt: null, saved_to_history: false } });
-    expect(screen.getByRole("status")).toHaveTextContent(status === "queued" ? "处理中" : "正在回复");
+    expect(screen.getByRole("status")).toHaveTextContent(status === "queued" ? "排队中" : "正在思考中");
     expect(screen.queryByRole("button", { name: /复制/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/\d+%/)).not.toBeInTheDocument();
   });

@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { ImagePlus } from "lucide-react";
 import { Icon } from "@/components/icons/icon";
 import { Link, useRouter } from "@/i18n/navigation";
 import type { GalleryCard } from "@/types/prompt";
@@ -58,7 +57,6 @@ export function PromptCard({ prompt, previewHover = false, onOverlongImage, onUs
       router.push(detailHref);
       return;
     }
-
     try {
       await navigator.clipboard.writeText(prompt.promptText);
       setCopyState("copied");
@@ -135,21 +133,18 @@ export function PromptCard({ prompt, previewHover = false, onOverlongImage, onUs
             <strong>{prompt.title}</strong>
             <span>{categoryLabel(prompt.category)}</span>
           </div>
-          <div className={styles.cardActions}>
-            <Link href={detailHref} className={styles.viewButton} data-testid="prompt-view-link">
-              <Icon name="eye" size={17} />{t("view")}
+          <div className={styles.cardActions} role="group" aria-label={t("actions")}>
+            <Link href={detailHref} className={styles.viewButton} data-testid="prompt-view-link" aria-label={t("view")} title={t("view")}>
+              {t("viewShort")}
             </Link>
-            <button className={styles.copyButton} type="button" onClick={copyPrompt}>
-              <Icon name="copy" size={16} />{copyState === "copied" ? t("copied") : copyState === "failed" ? t("copyFailed") : t("copy")}
-            </button>
+            {!onUseReference && <button className={styles.copyButton} type="button" onClick={copyPrompt} aria-label={copyState === "copied" ? t("copied") : copyState === "failed" ? t("copyFailed") : t("copy")} title={copyState === "failed" ? t("copyFailed") : t("copy")}>
+              {copyState === "copied" ? t("copiedShort") : copyState === "failed" ? t("copyFailedShort") : t("copy")}
+            </button>}
+            {onUseReference && prompt.image && <button type="button" className={styles.referenceAction} aria-label={t("createFromImageAriaLabel", { title: prompt.title })} title={t("createFromImage")} onClick={() => onUseReference(prompt)}>{t("createFromImageShort")}</button>}
           </div>
+          {!onUseReference && <span className={styles.srOnly} role="status" aria-live="polite">{copyState === "copied" ? t("copied") : copyState === "failed" ? t("copyFailed") : ""}</span>}
         </div>
-        {onUseReference && prompt.image && <>
-          {isReference && <span className={styles.referenceLabel}>{t("currentReference")}</span>}
-          <button type="button" className={styles.referenceAction} aria-label={t("createFromImageAriaLabel", { title: prompt.title })} onClick={() => onUseReference(prompt)}>
-            <ImagePlus size={16} aria-hidden="true" />{t("createFromImage")}
-          </button>
-        </>}
+        {onUseReference && prompt.image && isReference && <span className={styles.referenceLabel}>{t("currentReference")}</span>}
       </div>
 
       <div className={styles.cardText}>

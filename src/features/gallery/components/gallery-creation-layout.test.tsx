@@ -39,6 +39,25 @@ it("keeps the gallery and drafts mounted while switching between home composer a
   expect(screen.getByTestId("gallery-toolbar")).toHaveAttribute("data-query", "cat");
 });
 
+it("resizes the chat panel with the keyboard without unmounting the gallery", () => {
+  render(<GalleryPage {...props} chatOpen chatPanel={<p>chat content</p>} />);
+  const separator = screen.getByRole("separator", { name: "resizeChatPanel" });
+  const workspace = screen.getByTestId("gallery-workspace");
+  const pane = screen.getByTestId("creation-chat-pane");
+  vi.spyOn(workspace, "getBoundingClientRect").mockReturnValue({ width: 1600 } as DOMRect);
+  vi.spyOn(pane, "getBoundingClientRect").mockReturnValue({ width: 640 } as DOMRect);
+  expect(separator).toHaveAttribute("aria-orientation", "vertical");
+  fireEvent.focus(separator);
+  expect(separator).toHaveAttribute("aria-valuenow", "640");
+  expect(separator).toHaveAttribute("aria-valuemax", "1000");
+  fireEvent.keyDown(separator, { key: "ArrowLeft" });
+  expect(workspace.style.getPropertyValue("--chat-width")).toBe("664px");
+  fireEvent.keyDown(separator, { key: "ArrowLeft" });
+  expect(workspace.style.getPropertyValue("--chat-width")).toBe("688px");
+  expect(screen.getByTestId("feed")).toBeInTheDocument();
+  expect(screen.getByText("chat content")).toBeInTheDocument();
+});
+
 it("passes reference selection through without changing the gallery route", () => {
   const select = vi.fn();
   render(<GalleryPage {...props} onUseReference={select} activeReferenceId="reference" />);

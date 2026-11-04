@@ -1,0 +1,11 @@
+.flag {
+  display: block;
+  flex: none;
+  width: 26px;
+  height: 20px;
+  border: 1px solid rgb(128 128 128 / 30%);
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.optionIcon { flex: none; color: var(--color-text-muted); }

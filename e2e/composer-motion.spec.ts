@@ -59,7 +59,7 @@ for (const reduce of [false, true]) test(`inline gallery motion is ${reduce ? "d
   await expect(pane).toHaveAttribute("inert");
   await expect.poll(async () => (await pane.boundingBox())!.height).toBe(0);
   await expect.poll(async () => Math.round((await gallery.boundingBox())!.width)).toBe(Math.round(initial));
-  await expect(page.getByRole("textbox", { name: "说说你的想法，帮你写成提示词", exact: true })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "描述想生成的画面，或直接聊天", exact: true })).toBeVisible();
   await reference.dispatchEvent("click");
   await panel.getByRole("button", { name: "收起", exact: true }).dispatchEvent("click");
   await expect(pane).toHaveAttribute("inert");
@@ -86,7 +86,7 @@ test("the composer grows within bounds, clears cleanly and exposes the correct k
     else await route.continue();
   });
   await page.goto("/zh");
-  const input = page.getByRole("textbox", { name: "说说你的想法，帮你写成提示词", exact: true });
+  const input = page.getByRole("textbox", { name: "描述想生成的画面，或直接聊天", exact: true });
   await expect(input).toHaveCSS("resize", "none");
   await expect(page.getByText("支持粘贴", { exact: true })).toHaveCount(0);
   const initial = (await input.boundingBox())!.height;

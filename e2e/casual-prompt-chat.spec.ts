@@ -53,7 +53,7 @@ test("casual replies and prompt versions share private history without losing ed
   await page.goto("/zh");
   const firstReply = "你好！今天想聊些什么？我们也可以一起讨论创作。";
   await configure(request, email, firstReply);
-  await page.getByRole("textbox", { name: "说说你的想法，帮你写成提示词", exact: true }).fill("你好");
+  await page.getByRole("textbox", { name: "描述想生成的画面，或直接聊天", exact: true }).fill("你好");
   await page.getByRole("button", { name: "发送", exact: true }).click();
   expect((await metrics(request, email)).calls).toBe(0);
   const created = page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).pathname === "/api/prompt-conversations");

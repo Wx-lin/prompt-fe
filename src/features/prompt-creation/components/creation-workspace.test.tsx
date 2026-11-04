@@ -12,7 +12,7 @@ import { CreationHomeComposer, CreationPanel } from "./creation-panel";
 import NextLink from "next/link";
 
 const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }));
-vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ refresh }) }));
+vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ refresh }), Link: (props: React.ComponentProps<"a">) => <a {...props} /> }));
 vi.mock("@/features/auth/components/login-page", async () => {
   const { useState } = await import("react");
   return { LoginPage: ({ onAuthenticated, onClose }: { onAuthenticated: () => Promise<void>; onClose: () => void }) => {
@@ -78,8 +78,8 @@ describe("real same-page creative workspace", () => {
     fireEvent.change(textbox, { target: { value: "你好" } });
     if (action === "click") await user.click(screen.getByRole("button", { name: "发送" }));
     else fireEvent.keyDown(textbox, { key: "Enter" });
-    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith({ message: "你好" }, expect.any(String), expect.any(AbortSignal)));
-    expect(vi.mocked(promptConversationClient.create).mock.calls[0][0].mode ?? "auto").toBe("auto");
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith({ message: "你好", mode: "smart" }, expect.any(String), expect.any(AbortSignal)));
+    expect(vi.mocked(promptConversationClient.create).mock.calls[0][0].mode).toBe("smart");
   });
 
   it("sends a homepage image-only attachment as asset_id without forcing generation", async () => {
@@ -95,10 +95,10 @@ describe("real same-page creative workspace", () => {
     await user.upload(screen.getByLabelText("选择创作参考图片"), file);
     expect(promptConversationClient.upload).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "发送" }));
-    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith({ asset_id: ASSET }, expect.any(String), expect.any(AbortSignal)));
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith({ asset_id: ASSET, mode: "smart" }, expect.any(String), expect.any(AbortSignal)));
     expect(promptConversationClient.upload).toHaveBeenCalledWith(file, expect.any(AbortSignal));
     expect(promptConversationClient.send).not.toHaveBeenCalled();
-    expect(vi.mocked(promptConversationClient.create).mock.calls[0][0].mode ?? "auto").toBe("auto");
+    expect(vi.mocked(promptConversationClient.create).mock.calls[0][0].mode).toBe("smart");
   });
 
   it("continues the collapsed successful conversation from its latest turn through homepage auto send", async () => {
@@ -108,10 +108,10 @@ describe("real same-page creative workspace", () => {
     const { user } = mount();
     await openSaved(user);
     await user.click(screen.getByRole("button", { name: "收起" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "说说你的想法，帮你写成提示词" }), { target: { value: "你好" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "描述想生成的画面，或直接聊天" }), { target: { value: "你好" } });
     await user.click(screen.getByRole("button", { name: "发送" }));
-    await waitFor(() => expect(promptConversationClient.send).toHaveBeenCalledWith(ID, { message: "你好", parent_analysis_id: SECOND, parent_revision: 0 }, expect.any(String), expect.any(AbortSignal)));
-    expect(vi.mocked(promptConversationClient.send).mock.calls[0][1].mode ?? "auto").toBe("auto");
+    await waitFor(() => expect(promptConversationClient.send).toHaveBeenCalledWith(ID, { message: "你好", mode: "smart", parent_analysis_id: SECOND, parent_revision: 0 }, expect.any(String), expect.any(AbortSignal)));
+    expect(vi.mocked(promptConversationClient.send).mock.calls[0][1].mode).toBe("smart");
     expect(promptConversationClient.create).not.toHaveBeenCalled();
   });
 
@@ -132,7 +132,7 @@ describe("real same-page creative workspace", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "继续提问或描述想法，也可以添加参考图" }), { target: { value: "再解释一下" } });
     await user.click(screen.getByRole("button", { name: "发送" }));
     await waitFor(() => expect(promptConversationClient.send).toHaveBeenCalledWith(ID, expect.objectContaining({ message: "再解释一下", parent_analysis_id: TURN, parent_revision: 0 }), expect.any(String), expect.any(AbortSignal)));
-    expect(vi.mocked(promptConversationClient.send).mock.calls[0][1].mode ?? "auto").toBe("auto");
+    expect(vi.mocked(promptConversationClient.send).mock.calls[0][1].mode).toBe("smart");
   });
 
   it("keeps the latest successful prompt expanded after a later assistant turn and displays prompt numbering", async () => {
@@ -148,7 +148,8 @@ describe("real same-page creative workspace", () => {
     expect(screen.getByText(assistant.assistant_reply!)).toBeVisible();
     expect(screen.getByRole("button", { name: "版本 1 · 收起" })).toBeVisible();
     expect(screen.queryByRole("button", { name: /版本 [23]/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "换一种风格" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "换一种风格" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "调整构图" })).not.toBeInTheDocument();
   });
 
   it("survives the StrictMode effect cycle and submits one user action once", async () => {
@@ -157,7 +158,7 @@ describe("real same-page creative workspace", () => {
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "严格模式下的一次想法" } });
     await user.click(screen.getByRole("button", { name: "发送" }));
     await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledOnce());
-    expect(screen.getByRole("status")).toHaveTextContent("处理中");
+    expect(screen.getByRole("status")).toHaveTextContent("排队中");
   });
 
   it("restores an anonymous greeting in auto mode after login verifies the real session", async () => {
@@ -168,11 +169,11 @@ describe("real same-page creative workspace", () => {
     expect(screen.getByRole("dialog", { name: "登录" })).toBeVisible();
     expect(promptConversationClient.create).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "完成登录" }));
-    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith({ message: "你好" }, expect.any(String), expect.any(AbortSignal)));
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith({ message: "你好", mode: "smart" }, expect.any(String), expect.any(AbortSignal)));
     expect(fetcher).toHaveBeenCalledWith("/api/auth/me", expect.objectContaining({ credentials: "same-origin", cache: "no-store", redirect: "error" }));
     expect(refresh).toHaveBeenCalledOnce();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("处理中");
+    expect(screen.getByRole("status")).toHaveTextContent("排队中");
   });
 
   it("retains anonymous input on cancel and ignores a later successful session response", async () => {
@@ -205,7 +206,7 @@ describe("real same-page creative workspace", () => {
     expect(screen.getByRole("textbox")).toHaveValue("");
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "账号B的新想法" } });
     await user.click(screen.getByRole("button", { name: "发送" }));
-    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith({ message: "账号B的新想法" }, expect.any(String), expect.any(AbortSignal)));
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith({ message: "账号B的新想法", mode: "smart" }, expect.any(String), expect.any(AbortSignal)));
   });
 
   it.each([Response.json({ id: 7 }), new Response(null, { status: 401 })])("does not create when login has no verified user session", async response => {
@@ -339,9 +340,21 @@ describe("real same-page creative workspace", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "编辑中文提示词" }), { target: { value: "收起后仍保留的草稿" } });
     await user.click(screen.getByRole("button", { name: "收起" }));
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "继续上次创作" }));
+    await user.click(screen.getByRole("textbox", { name: "描述想生成的画面，或直接聊天" }));
     expect(screen.getByRole("textbox", { name: "编辑中文提示词" })).toHaveValue("收起后仍保留的草稿");
     expect(promptAnalysisClient.update).not.toHaveBeenCalled();
+  });
+
+  it("reopens a collapsed pending conversation on input focus without creating another job", async () => {
+    const { user } = mount();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "画一只小猫" } });
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    expect(await screen.findByRole("status")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "收起" }));
+    expect(screen.queryByRole("button", { name: "继续上次创作" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("textbox", { name: "描述想生成的画面，或直接聊天" }));
+    expect(screen.getByRole("complementary")).toBeVisible();
+    expect(promptConversationClient.create).toHaveBeenCalledOnce();
   });
 
   it("reveals the unsaved edit confirmation when opening history from the collapsed homepage", async () => {
@@ -369,10 +382,8 @@ describe("real same-page creative workspace", () => {
     const { user } = mount(); await openSaved(user);
     await user.click(screen.getByRole("button", { name: "编辑" }));
     await user.click(screen.getByRole("button", { name: "收起" }));
-    expect(screen.getByRole("textbox")).toBeDisabled();
-    expect(screen.getByRole("button", { name: "图片转提示词" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "继续上次创作" })).toBeEnabled();
-    await user.click(screen.getByRole("button", { name: "继续上次创作" }));
+    expect(screen.queryByRole("button", { name: "继续上次创作" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("textbox", { name: "描述想生成的画面，或直接聊天" }));
     expect(screen.getByRole("textbox", { name: "编辑中文提示词" })).toHaveValue(pair.zh);
   });
 
@@ -462,16 +473,15 @@ describe("real same-page creative workspace", () => {
     expect(savedLeave.defaultPrevented).toBe(false);
   });
 
-  it("fills suggested refinements without creating another model job until the user sends", async () => {
+  it("keeps manual follow-up available without suggested refinement buttons", async () => {
     const { user } = mount(); await openSaved(user);
-    await user.click(screen.getByRole("button", { name: "换一种风格" }));
-    expect(screen.getByRole("textbox")).toHaveValue("保留主体，换一种风格");
+    expect(screen.queryByRole("button", { name: "换一种风格" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "调整构图" })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "保留主体，调整画面构图" } });
     expect(promptConversationClient.send).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "调整构图" }));
-    expect(screen.getByRole("textbox")).toHaveValue("保留主体，调整画面构图");
     await user.click(screen.getByRole("button", { name: "发送" }));
-    await waitFor(() => expect(promptConversationClient.send).toHaveBeenCalledWith(ID, { message: "保留主体，调整画面构图", parent_analysis_id: TURN, parent_revision: 0 }, expect.any(String), expect.any(AbortSignal)));
-    expect(screen.getByRole("status")).toHaveTextContent("处理中");
+    await waitFor(() => expect(promptConversationClient.send).toHaveBeenCalledWith(ID, { message: "保留主体，调整画面构图", mode: "smart", parent_analysis_id: TURN, parent_revision: 0 }, expect.any(String), expect.any(AbortSignal)));
+    expect(screen.getByRole("status")).toHaveTextContent("排队中");
   });
 
   it("retains a failed follow-up and lets the user query the existing conversation", async () => {
@@ -508,7 +518,7 @@ describe("real same-page creative workspace", () => {
     expect(promptConversationClient.retry).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "重新生成" }));
     await waitFor(() => expect(promptConversationClient.retry).toHaveBeenCalledWith(ID, TURN, expect.any(String), expect.any(AbortSignal)));
-    expect(screen.getByRole("status")).toHaveTextContent("处理中");
+    expect(screen.getByRole("status")).toHaveTextContent("排队中");
   });
 
   it("recovers an expired preview through private conversation refresh", async () => {

@@ -5,7 +5,7 @@ test.skip(process.env.AIGC_PROMPT_INTEGRATION !== "1", "Requires the loopback Po
 test.setTimeout(90_000);
 const fixture = process.env.AIGC_PROMPT_FIXTURE_URL ?? "http://127.0.0.1:8036";
 const image = "e2e/fixtures/submission.png";
-const homeInput = "说说你的想法，帮你写成提示词";
+const homeInput = "描述想生成的画面，或直接聊天";
 const followupInput = "继续提问或描述想法，也可以添加参考图";
 const panelLabel = "提示词创作对话";
 const emailForTest = () => `sample+inline-${test.info().project.name}-${randomUUID().slice(0, 8)}@example.test`;
@@ -109,7 +109,7 @@ test("text conversations survive collapse and search, refine the saved version, 
     await search.fill("粉色");
     await search.press("Enter");
     await expect(page).toHaveURL(/q=/);
-    await page.getByRole("button", { name: "继续上次创作", exact: true }).click();
+    await page.getByRole("textbox", { name: homeInput, exact: true }).click();
     await expect(panel).toBeVisible();
     expect((await metrics(request, email)).job_count).toBe(1);
     await release(request, email);
@@ -163,12 +163,16 @@ test("local images and gallery references stay local until explicit send and sha
   await expect.poll(async () => (await metrics(request, email)).image_calls).toBe(1);
   await expect.poll(() => panel.getByRole("img", { name: "参考图片", exact: true }).evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   await panel.getByRole("button", { name: "新建", exact: true }).click();
-  const reference = page.getByRole("button", { name: /用《粉色产品摄影参考图 1》的图片创作提示词/ }).filter({ visible: true });
+  const reference = page.getByRole("button", { name: /做《粉色产品摄影参考图 1》同款/ }).filter({ visible: true });
   await reference.click();
   expect((await metrics(request, email)).calls).toBe(1);
+  await expect(panel).toBeHidden();
+  await expect(page.getByRole("textbox", { name: homeInput, exact: true })).not.toHaveValue("");
+  await expect(page.getByRole("img", { name: "参考图片", exact: true })).toBeVisible();
   const imported = page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).pathname === "/api/prompt-assets/from-prompt");
-  await panel.getByRole("button", { name: "发送", exact: true }).click();
+  await page.getByRole("button", { name: "发送", exact: true }).click();
   expect((await imported).status()).toBe(201);
+  await expect(panel).toBeVisible();
   await expect(version(panel, 1)).toContainText("根据参考图片和想法创作", { timeout: 20_000 });
   expect((await metrics(request, email)).image_calls).toBe(2);
   expect((await metrics(request, email)).conversation_count).toBe(2);

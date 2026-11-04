@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "siteName": "AI Prompt Gallery",
-    "title": "AI Prompt Library | Text-to-Image Prompts",
+    "siteName": "像素奇想",
+    "title": "像素奇想 | AI Image and Character Creation",
     "description": "Discover ready-to-use AI image prompts, browse inspiration by style, scene, and model.",
     "ogDescription": "Discover ready-to-use AI image prompts.",
     "loginTitle": "Log in",
@@ -9,7 +9,7 @@
     "promptNotFound": "Prompt not found"
   },
   "brand": {
-    "homeAriaLabel": "AIGC Prompt Gallery home"
+    "homeAriaLabel": "像素奇想 home"
   },
   "theme": {
     "label": "Theme",
@@ -48,7 +48,10 @@
     "appearance": "Appearance",
     "sortRecommended": "Recommended",
     "noContent": "No content",
-    "creationBrand": "Prompt Studio"
+    "creationBrand": "像素奇想",
+    "userGuide": "User guide",
+    "characterLibrary": "Character library",
+    "characterCreation": "Character creation"
   },
   "categories": {
     "portrait": "Portraits",
@@ -79,6 +82,7 @@
     ]
   },
   "gallery": {
+    "resizeChatPanel": "Resize chat panel",
     "waterfallAriaLabel": "Prompt waterfall grid",
     "emptyDefault": "No prompts yet",
     "loadError": "Couldn't load prompts right now, please refresh and try again.",
@@ -109,13 +113,18 @@
     "bookmarkAriaLabel": "Bookmark: {title}",
     "defaultAuthor": "AIGC Creator",
     "view": "View prompt",
+    "viewShort": "View",
+    "actions": "Artwork actions",
     "copy": "Copy",
     "copied": "Copied",
+    "copiedShort": "Done",
     "copyFailed": "View details instead",
+    "copyFailedShort": "Error",
     "bookmarkedAriaLabel": "Remove bookmark: {title}",
     "bookmarkFailed": "Action failed, please try again",
-    "createFromImage": "Create from image",
-    "createFromImageAriaLabel": "Create a prompt from {title}",
+    "createFromImage": "Create similar",
+    "createFromImageShort": "Create similar",
+    "createFromImageAriaLabel": "Create similar to {title}",
     "currentReference": "Current reference"
   },
   "detail": {
@@ -147,7 +156,7 @@
   },
   "login": {
     "closeAriaLabel": "Close login",
-    "heading": "Welcome to AI Prompt Gallery",
+    "heading": "Welcome to 像素奇想",
     "subtitle": "Log in to save inspiration and keep creating anytime",
     "google": "Continue with Google",
     "googleUnavailable": "Google login isn't configured with an OAuth client yet, please use the email code instead.",
@@ -310,10 +319,11 @@
     "continueChange": "Continue"
   },
   "promptCreation": {
-    "placeholder": "Share your idea and turn it into a prompt",
+    "placeholder": "Describe an image or start a conversation",
     "followupPlaceholder": "Ask a question, describe an idea, or add a reference image",
     "upload": "Add image",
     "imageToPrompt": "Image to prompt",
+    "characterSetting": "Character setup",
     "fileLabel": "Choose a reference image",
     "keyboardHint": "Enter to send · Shift+Enter for a new line",
     "touchHint": "Return for a new line, tap the button to send",
@@ -323,6 +333,9 @@
     "sendHint": "Enter to send, Shift+Enter for a new line; Ctrl/⌘+Enter also works",
     "removeImage": "Remove reference image",
     "reference": "Reference image",
+    "referencePromptLoading": "Loading the original prompt…",
+    "referencePromptFailed": "Could not load the original prompt. Try again or enter your own.",
+    "referencePromptTooLong": "The prompt exceeds 500 characters. Shorten it before sending.",
     "source": "From gallery · {title}",
     "continue": "Continue creating",
     "panelLabel": "Prompt creation conversation",
@@ -358,6 +371,8 @@
     "copyFailed": "Could not copy. Select and copy the text manually.",
     "uploading": "Preparing reference image…",
     "creating": "Sending…",
+    "thinking": "Thinking",
+    "thinkingQueued": "Waiting in queue",
     "queued": "Processing…",
     "running": "Replying…",
     "processingHint": "Keep browsing; find the result in history later.",
@@ -398,6 +413,19 @@
     "saveConflict": "This version changed. Your draft is preserved; copy it before reopening the record.",
     "invalidPrompt": "The prompt is empty or exceeds the limit for this language.",
     "notEditable": "Wait for this version to finish, or resolve the failed task first.",
-    "conversationLimit": "This conversation reached its limit. Start a new creation to continue."
+    "conversationLimit": "This conversation reached its limit. Start a new creation to continue.",
+    "creationMode": "Creation mode",
+    "chatMode": "Chat",
+    "imageMode": "Create image",
+    "generatedImage": "Generated image",
+    "enlargeImage": "Enlarge image",
+    "editImage": "Edit image",
+    "downloadImage": "Download image",
+    "closeImage": "Close",
+    "imageGenerating": "Creating image…",
+    "imageQueue": "In queue…",
+    "imageProgressLabel": "Estimated image generation progress",
+    "imageProgressEstimate": "Estimated {percent}%",
+    "imageUnavailable": "Image unavailable. Refresh to try again."
   }
 }

@@ -44,10 +44,6 @@
 .followupComposer .idea { min-height: 48px; font-size: 14px; }
 .followupComposer .send { min-width: 92px; min-height: 36px; padding: 0 12px; font-size: 12px; }
 .followupComposer .upload { border: 0; min-height: 32px; padding: 0; }
-.suggestions { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-.suggestions button { border: 1px solid var(--color-border); padding: 6px 12px; border-radius: 18px; background: var(--color-surface); color: var(--color-text); font: inherit; font-size: 12px; cursor: pointer; transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease; }
-.suggestions button:hover { background: var(--color-hover); border-color: var(--color-border-strong); }
-.suggestions button:active { transform: scale(.98); }
 .disclaimer { margin: 8px 0 0; text-align: center; font-size: 11px; color: var(--color-text-muted); }
 .empty { display: flex; flex: 1; min-height: 220px; align-items: center; justify-content: center; flex-direction: column; color: var(--color-text-muted); text-align: center; gap: 12px; padding: 30px 20px; }
 .empty h3 { color: var(--color-text); font-size: 16px; margin: 0; font-weight: 500; }
@@ -67,7 +63,10 @@
 @media (prefers-reduced-motion: reduce) {
   .composerWrap *, .messages * { animation: none; transition: none; }
   .spinner { animation: none; }
-  .suggestions button { transition: none; }
+}
+
+@media (max-height: 560px) {
+  .followupComposer .idea { max-height: clamp(48px, calc(100dvh - 350px), 208px); }
 }
 @media (max-width: 680px) {
   .home { padding: 0 16px; margin-bottom: 20px; }
@@ -83,9 +82,4 @@
   .panelHeader h2 { font-size: 15px; }
   .panelFooter { padding-left: 14px; padding-right: 14px; }
   .panel { min-height: 0; height: 100%; }
-}
-
-/* Keep controls reachable when the viewport is short and an image is attached. */
-@media (max-height: 560px) {
-  .followupComposer .idea { max-height: clamp(48px, calc(100dvh - 350px), 208px); }
 }

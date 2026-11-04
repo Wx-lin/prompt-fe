@@ -30,6 +30,45 @@ beforeEach(() => { vi.useFakeTimers(); URL.createObjectURL = vi.fn(file => "blob
 afterEach(() => { flows.splice(0).forEach(flow => flow.destroy()); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("private inline conversation workflow", () => {
+  it("sends the smart unified mode with the selected historical image", async () => {
+    const { flow, client } = setup();
+    const generated_image = { id: "old-image", url: "https://example.com/old.png", expires_at: "later", width: 1024, height: 1024 };
+    client.detail.mockResolvedValueOnce(conversation([{ ...turn(), response_type: "image", generated_image, prompt: null, result: null } as never]));
+    await flow.openConversation("root");
+    flow.selectGeneratedImage(generated_image);
+    flow.setMessage("背景换蓝色");
+    await flow.send("smart" as never);
+    expect(client.send.mock.calls[0][1]).toEqual({ message: "背景换蓝色", mode: "smart", generated_image_id: "old-image", parent_analysis_id: "root", parent_revision: 0 });
+  });
+  it("sends image mode and continues from the generated turn", async () => {
+    const { flow, client } = setup();
+    flow.setMessage("画一只猫");
+    await flow.send("image" as never);
+    expect(client.create).toHaveBeenCalledWith({ message: "画一只猫", mode: "image" }, expect.any(String), expect.any(AbortSignal));
+    client.detail.mockResolvedValueOnce(conversation([{ ...turn(), response_type: "image", prompt: null, result: null, assistant_reply: null, prompt_number: null, generated_image: { id: "img", url: "https://example.com/img", expires_at: "later", width: 1024, height: 1024 } } as never]));
+    await flow.refresh();
+    flow.setMessage("背景换成蓝色");
+    await flow.send("image" as never);
+    expect(client.send).toHaveBeenCalledWith("root", { message: "背景换成蓝色", mode: "image", parent_analysis_id: "root", parent_revision: 0 }, expect.any(String), expect.any(AbortSignal));
+  });
+
+  it("freezes a selected historical image and idempotency key through uncertain retries, then clears it on account change", async () => {
+    const { flow, client, state } = setup();
+    const generated_image = { id: "old-image", url: "https://example.com/old.png", expires_at: "later", width: 1024, height: 1024 };
+    client.detail.mockResolvedValueOnce(conversation([{ ...turn(), response_type: "image", generated_image, prompt: null, result: null } as never, turn("succeeded", "latest", 2)]));
+    await flow.openConversation("root");
+    flow.selectGeneratedImage(generated_image);
+    flow.setMessage("背景换蓝色");
+    client.send.mockRejectedValueOnce(new ApiError(0, "NETWORK_ERROR"));
+    await flow.send("image");
+    await flow.send("image");
+    expect(client.send.mock.calls[0][1]).toEqual({ message: "背景换蓝色", mode: "image", generated_image_id: "old-image", parent_analysis_id: "latest", parent_revision: 0 });
+    expect(client.send.mock.calls[1][1]).toEqual(client.send.mock.calls[0][1]);
+    expect(client.send.mock.calls[1][2]).toBe(client.send.mock.calls[0][2]);
+    flow.setIdentity("different-account");
+    expect(state().generatedImage).toBeNull();
+    expect(state().conversation).toBeNull();
+  });
   it("keeps a first anonymous generate intent through confirmed login", async () => {
     const { flow, client, state } = setup(null);
     flow.setMessage("一只送花的小猫");
@@ -179,12 +218,12 @@ describe("private inline conversation workflow", () => {
 
   it("imports gallery references only on send and keeps their pending source visible", async () => {
     const { flow, client, state } = setup();
-    flow.selectReference({ promptId: "public-id", title: "产品", imageUrl: "/public.jpg" });
-    expect(state()).toMatchObject({ expanded: true, previewUrl: "/public.jpg", source: { promptId: "public-id" } });
+    flow.selectReference({ promptId: "public-id", title: "产品", imageUrl: "/public.jpg", promptText: "样例提示词" });
+    expect(state()).toMatchObject({ expanded: false, previewUrl: "/public.jpg", message: "样例提示词", source: { promptId: "public-id" } });
     expect(client.importReference).not.toHaveBeenCalled();
     await flow.send();
     expect(client.importReference).toHaveBeenCalledWith("public-id", expect.any(AbortSignal));
-    expect(client.create).toHaveBeenCalledWith({ asset_id: "asset" }, expect.any(String), expect.any(AbortSignal));
+    expect(client.create).toHaveBeenCalledWith({ message: "样例提示词", asset_id: "asset" }, expect.any(String), expect.any(AbortSignal));
   });
 
   it("refines the last saved effective result with matching parent revision", async () => {

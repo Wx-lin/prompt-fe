@@ -1,6 +1,6 @@
 import "server-only";
 import { promptAnalysisProxy as proxy } from "./proxy";
-import type { ConversationTurn, CreateConversationInput, PromptConversationDetail, PromptConversationHistory, PromptConversationSummary } from "@/types/prompt-conversation";
+import type { ConversationTurn, CreateConversationInput, GeneratedImage, PromptConversationDetail, PromptConversationHistory, PromptConversationSummary } from "@/types/prompt-conversation";
 
 type Context = { params: Promise<{ id: string }> };
 type RecordValue = Record<string, unknown>;
@@ -9,10 +9,27 @@ const STATUSES = ["queued", "running", "succeeded", "failed", "unknown", "cancel
 // Only this private full-history response exceeds the ordinary 1MiB limit.
 const MAX_CONVERSATION_RESPONSE = 32 * 1024 * 1024;
 
-function responseFields(data: RecordValue): Pick<ConversationTurn, "response_type" | "assistant_reply" | "prompt_number"> | null {
+function generatedImage(value: unknown): GeneratedImage | null {
+  const data = proxy.record(value);
+  if (!data || !proxy.uuid(data.id) || !proxy.date(data.expires_at) || !proxy.integer(data.width, 1) || !proxy.integer(data.height, 1) || data.width > 8192 || data.height > 8192 || typeof data.url !== "string" || data.url.length > 8192) return null;
+  try {
+    const url = new URL(data.url);
+    if (url.protocol !== "https:" || url.username || url.password) return null;
+  } catch { return null; }
+  return { id: data.id, url: data.url, expires_at: data.expires_at, width: data.width, height: data.height };
+}
+
+function responseFields(data: RecordValue): Pick<ConversationTurn, "response_type" | "assistant_reply" | "prompt_number" | "generated_image" | "image_status"> | null {
   const keys = ["response_type", "assistant_reply", "prompt_number"];
   if (!keys.some(key => Object.hasOwn(data, key))) return {};
   if (!keys.every(key => Object.hasOwn(data, key))) return null;
+  if (data.response_type === "image") {
+    const image = generatedImage(data.generated_image);
+    const unavailable = data.image_status === "temporarily_unavailable" && data.generated_image === null;
+    if (data.status !== "succeeded" || (!image && !unavailable) || (data.image_status != null && data.image_status !== (unavailable ? "temporarily_unavailable" : "available")) || data.assistant_reply !== null || data.prompt_number !== null || data.prompt !== null || data.result !== null || data.saved_to_history !== true) return null;
+    return { response_type: "image", assistant_reply: null, prompt_number: null, generated_image: image, ...(data.image_status ? { image_status: data.image_status as "available" | "temporarily_unavailable" } : {}) };
+  }
+  if (data.generated_image != null) return null;
   if (data.response_type === "assistant") {
     if (data.status !== "succeeded" || !proxy.text(data.assistant_reply, 4000) || data.result !== null || data.prompt !== null || data.revision !== 0 || data.saved_to_history !== true || data.prompt_number !== null) return null;
     return { response_type: "assistant", assistant_reply: data.assistant_reply, prompt_number: null };
@@ -29,8 +46,9 @@ function turn(value: unknown): ConversationTurn | null {
   const data = proxy.record(value);
   const response = data && responseFields(data);
   if (!response) return null;
+  if (data.generation_mode !== undefined && data.generation_mode !== null && data.generation_mode !== "image") return null;
   const result = proxy.detail(value);
-  return result?.conversation_id && result.version && typeof result.user_message === "string" && result.parent_analysis_id !== undefined ? { ...result, ...response } as ConversationTurn : null;
+  return result?.conversation_id && result.version && typeof result.user_message === "string" && result.parent_analysis_id !== undefined ? { ...result, ...response, ...(data.generation_mode === "image" ? { generation_mode: "image" as const } : {}) } as ConversationTurn : null;
 }
 
 function conversation(value: unknown): PromptConversationDetail | null {
@@ -56,11 +74,11 @@ function history(value: unknown): PromptConversationHistory | null {
 }
 
 function input(data: RecordValue, followup: boolean): CreateConversationInput | null {
-  const allowed = followup ? ["message", "asset_id", "mode", "parent_analysis_id", "parent_revision"] : ["message", "asset_id", "mode"];
+  const allowed = followup ? ["message", "asset_id", "generated_image_id", "mode", "parent_analysis_id", "parent_revision"] : ["message", "asset_id", "mode"];
   if (Object.keys(data).some(key => !allowed.includes(key))) return null;
   const message = typeof data.message === "string" ? data.message.trim() : undefined;
-  if ((Object.hasOwn(data, "message") && (!message || !proxy.text(message, 500))) || (Object.hasOwn(data, "asset_id") && !proxy.uuid(data.asset_id)) || (Object.hasOwn(data, "mode") && data.mode !== "auto" && data.mode !== "generate") || (!message && !data.asset_id)) return null;
-  return { ...(message ? { message } : {}), ...(proxy.uuid(data.asset_id) ? { asset_id: data.asset_id } : {}), ...(data.mode === "auto" || data.mode === "generate" ? { mode: data.mode } : {}) };
+  if ((Object.hasOwn(data, "message") && (!message || !proxy.text(message, 500))) || (Object.hasOwn(data, "asset_id") && !proxy.uuid(data.asset_id)) || (Object.hasOwn(data, "generated_image_id") && (!proxy.uuid(data.generated_image_id) || (data.mode !== "image" && data.mode !== "smart") || data.asset_id != null)) || (Object.hasOwn(data, "mode") && data.mode !== "auto" && data.mode !== "generate" && data.mode !== "image" && data.mode !== "smart") || (!message && !data.asset_id)) return null;
+  return { ...(message ? { message } : {}), ...(proxy.uuid(data.asset_id) ? { asset_id: data.asset_id } : {}), ...(proxy.uuid(data.generated_image_id) ? { generated_image_id: data.generated_image_id } : {}), ...(data.mode === "auto" || data.mode === "generate" || data.mode === "image" || data.mode === "smart" ? { mode: data.mode } : {}) };
 }
 
 export async function createConversation(request: Request) {

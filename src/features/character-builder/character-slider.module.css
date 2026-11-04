@@ -1,0 +1,11 @@
+.row { display: grid; grid-template-columns: minmax(54px, auto) minmax(80px, 1fr) minmax(50px, auto); gap: 12px; align-items: center; color: var(--color-text); font-size: 12px; }
+.label { white-space: nowrap; }
+.value { color: var(--color-text-muted); text-align: right; overflow-wrap: anywhere; }
+.slider { min-width: 0; width: 100%; padding-inline: 2px; }
+.control { display: flex; align-items: center; width: 100%; height: 44px; touch-action: none; cursor: pointer; }
+.track { position: relative; width: 100%; height: 5px; border-radius: 99px; background: var(--color-border-strong); }
+.indicator { position: absolute; height: 100%; border-radius: inherit; background: var(--color-text); }
+.thumb { display: flex; width: 18px; height: 18px; border: 2px solid var(--color-text); border-radius: 50%; background: var(--color-surface); box-shadow: 0 1px 4px var(--color-shadow); transition: box-shadow .15s ease, transform .15s ease; }
+.thumb:hover, .thumb:focus-within, .thumb[data-dragging] { transform: scale(1.1); box-shadow: 0 0 0 5px var(--color-hover); }
+.thumb:focus-within { outline: 2px solid var(--color-text); outline-offset: 4px; }
+@media (prefers-reduced-motion: reduce) { .thumb { transition: none; } }

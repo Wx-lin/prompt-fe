@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { GalleryToolbar } from "./gallery-toolbar";
 import { SiteHeader } from "./site-header";
 
-vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
+vi.mock("next-intl", () => ({ useLocale: () => "zh", useTranslations: () => (key: string) => key }));
 vi.mock("@/i18n/navigation", () => ({ Link: (props: ComponentProps<"a">) => <a {...props} />, useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/components/select-field/select-field", () => ({ SelectField: ({ name, options }: { name: string; options: { label: string; value: string }[] }) => <select aria-label={name}>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select> }));
 vi.mock("@/components/theme-provider/theme-toggle-control", () => ({ ThemeToggleControl: () => <button>theme</button> }));
@@ -17,6 +17,23 @@ vi.mock("./language-toggle", () => ({ LanguageToggle: () => <a href="/en">langua
 afterEach(cleanup);
 
 const props = { categories: [], models: [], activeCategory: "portrait", activeSort: "hot", activeModel: "FLUX", query: "cat" };
+
+it("offers the character library as an independent header link", () => {
+  render(<SiteHeader {...props} showNavigationRow={false} />);
+  const link = screen.getByRole("link", { name: "characterCreation" });
+  expect(link).toHaveAttribute("href", "/character-library");
+  expect(within(link).getByText("NEW")).toBeVisible();
+  expect(link.querySelectorAll("img")).toHaveLength(2);
+  expect(link.closest("[data-site-topbar]")).not.toBeNull();
+  expect(screen.getByRole("link", { name: "creationBrand" })).toBeVisible();
+  expect(screen.getByRole("link", { name: "publish" })).toBeVisible();
+});
+
+it("can hide the character library link on the library page", () => {
+  render(<SiteHeader {...props} showNavigationRow={false} showCharacterLink={false} />);
+  expect(screen.queryByRole("link", { name: "characterCreation" })).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "creationBrand" })).toBeVisible();
+});
 
 it("keeps theme and language in the account menu instead of the header for signed-in users", () => {
   render(<SiteHeader {...props} user={{ id: "u", nickname: "Creator", email: "c@example.com", avatar_url: null, created_at: "2026-10-13" }} />);

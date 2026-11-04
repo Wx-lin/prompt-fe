@@ -47,6 +47,46 @@ beforeEach(() => vi.mocked(getSessionToken).mockResolvedValue("private-session")
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe("private prompt conversation BFF", () => {
+  it("forwards image generation and returns a private generated image in history", async () => {
+    const generated_image = { id: ASSET, url: "https://images.example.com/generated.png", expires_at: DATE, width: 1024, height: 1024 };
+    const imageTurn = { ...turn, response_type: "image", generated_image, assistant_reply: null, prompt_number: null, result: null, prompt: null };
+    const fetcher = upstream(imageTurn, 202);
+    const response = await create(incoming("POST", { message: "画一只猫", mode: "image" }, { "idempotency-key": KEY }));
+    expect(response.status).toBe(202);
+    expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ message: "画一只猫", mode: "image" });
+    expect((await response.json()).data.generated_image).toEqual(generated_image);
+    upstream({ ...conversation, turns: [imageTurn] });
+    expect((await (await detail(incoming(), context())).json()).data.turns[0].generated_image).toEqual(generated_image);
+  });
+
+  it("rejects unsafe generated image links", async () => {
+    const generated_image = { id: ASSET, url: "javascript:alert(1)", expires_at: DATE, width: 1024, height: 1024 };
+    upstream({ ...turn, response_type: "image", generated_image, assistant_reply: null, prompt_number: null, result: null, prompt: null });
+    await expectError(await create(incoming("POST", { message: "猫", mode: "image" }, { "idempotency-key": KEY })), 502, "BAD_GATEWAY");
+  });
+
+  it("preserves history when generated image signing is temporarily unavailable", async () => {
+    const unavailable = { ...turn, response_type: "image", image_status: "temporarily_unavailable", generated_image: null, assistant_reply: null, prompt_number: null, result: null, prompt: null };
+    upstream({ ...conversation, turns: [unavailable] });
+    const response = await detail(incoming(), context());
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.turns[0]).toMatchObject({ response_type: "image", image_status: "temporarily_unavailable", generated_image: null });
+  });
+
+  it("forwards a selected historical image only on an image follow-up", async () => {
+    const fetcher = upstream({ ...turn, status: "queued", phase: "queued", result: null, prompt: null, saved_to_history: false, response_type: null, assistant_reply: null, prompt_number: null, generation_mode: "image", generated_image: null }, 202);
+    const body = { message: "换背景", mode: "image", generated_image_id: ASSET, parent_analysis_id: TURN, parent_revision: 0 };
+    expect((await send(incoming("POST", body, { "idempotency-key": KEY }), context())).status).toBe(202);
+    expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual(body);
+    expect((await send(incoming("POST", { ...body, asset_id: ASSET }, { "idempotency-key": KEY }), context())).status).toBe(422);
+  });
+  it("forwards a selected historical image in unified smart mode", async () => {
+    const fetcher = upstream({ ...turn, status: "queued", phase: "queued", result: null, prompt: null, saved_to_history: false, response_type: null, assistant_reply: null, prompt_number: null, generation_mode: null, generated_image: null }, 202);
+    const body = { message: "换背景", mode: "smart", generated_image_id: ASSET, parent_analysis_id: TURN, parent_revision: 0 };
+    expect((await send(incoming("POST", body, { "idempotency-key": KEY }), context())).status).toBe(202);
+    expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual(body);
+    expect((await send(incoming("POST", { ...body, asset_id: ASSET }, { "idempotency-key": KEY }), context())).status).toBe(422);
+  });
   it("forwards explicit auto/generate modes without accepting provider instructions", async () => {
     for (const mode of ["auto", "generate"]) {
       const fetcher = upstream(turn, 202);

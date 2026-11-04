@@ -14,13 +14,23 @@ function setup(extra = {}) {
   return props;
 }
 describe("unified creation composer", () => {
+  it("keeps image-to-prompt in the composer without a character-library link", () => {
+    setup();
+    expect(screen.queryByRole("link", { name: "角色设定" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "图片转提示词" })).toBeVisible();
+  });
   it("has one clear creation input and explicit image/history/send actions without section headings", () => {
     const props = setup();
-    expect(screen.getByRole("textbox", { name: "说说你的想法，帮你写成提示词" })).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "描述想生成的画面，或直接聊天" })).toBeVisible();
     expect(screen.getByRole("button", { name: "发送" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "历史" }));
     expect(props.onHistory).toHaveBeenCalledOnce();
     expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+  });
+  it("uses one input without a chat or image mode selector or continue button", () => {
+    setup({ onMode: vi.fn(), onContinue: vi.fn() });
+    expect(screen.queryByRole("combobox", { name: "创作模式" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "继续上次创作" })).not.toBeInTheDocument();
   });
   it("selects a valid image locally and does not submit it until send", () => {
     const props = setup({ message: "想法" });
@@ -153,13 +163,10 @@ describe("unified creation composer", () => {
     expect(props.onSend).not.toHaveBeenCalled();
   });
 
-  it("removes the current reference and resumes an existing conversation through explicit actions", () => {
-    const onContinue = vi.fn();
-    const props = setup({ previewUrl: "/reference.png", onContinue, followup: true });
+  it("removes the current reference and sends it through explicit actions", () => {
+    const props = setup({ previewUrl: "/reference.png", followup: true });
     fireEvent.click(screen.getByRole("button", { name: "移除参考图片" }));
     expect(props.onClearAttachment).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getByRole("button", { name: "继续上次创作" }));
-    expect(onContinue).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByRole("button", { name: "发送" }));
     expect(props.onSend).toHaveBeenCalledOnce();
   });
