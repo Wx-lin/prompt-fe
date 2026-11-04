@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { characterAssetUrl } from "@/lib/character-asset-url";
 import { Dialog } from "@base-ui/react/dialog";
 import { Plus, Search, Pencil, Trash2, UserRound } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -124,7 +125,7 @@ export function CharacterLibrary({ locale, authenticated, initialTab = "official
     <section className={styles.results} role="tabpanel" aria-label={tab === "official" ? tr("官方角色库", "Official characters") : tr("我的角色库", "My characters")}>
       {tab === "official" ? <>{official.length ? <div className={styles.grid}>{official.map((character) => <article key={character.id} className={styles.character}>
         <Link className={styles.characterLink} href={`/character-setting?preset=${encodeURIComponent(character.id)}`} aria-label={tr(`编辑${character.name}`, `Edit ${character.englishName}`)}>
-          <div className={styles.stage}><div className={styles.light} /><div className={styles.platform} /><Image src={character.image} alt="" width={1024} height={1536} sizes="(max-width: 600px) 50vw, (max-width: 900px) 33vw, 25vw" /></div>
+          <div className={styles.stage}><div className={styles.light} /><div className={styles.platform} /><Image src={characterAssetUrl(character.image)} alt="" width={1024} height={1536} sizes="(max-width: 600px) 50vw, (max-width: 900px) 33vw, 25vw" /></div>
           <span className={styles.name}>{en ? character.englishName : character.name}</span><span className={styles.edit}><Pencil size={14} />{tr("编辑角色", "Edit character")}</span>
         </Link>
       </article>)}</div> : <p className={styles.empty}>{tr("没有找到符合条件的角色。", "No characters match your filters.")}</p>}</> :

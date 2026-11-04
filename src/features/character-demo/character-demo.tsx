@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { characterAssetUrl } from "@/lib/character-asset-url";
 import { ArrowLeft, ArrowUpRight, Copy, RotateCcw, Sparkles } from "lucide-react";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { ThemeToggleControl } from "@/components/theme-provider/theme-toggle-control";
@@ -56,7 +57,7 @@ export function CharacterDemo() {
         </section>
         <section ref={previewRef} className={styles.previewPanel} aria-label="角色预览">
           <div className={styles.previewTop}><div><h2>角色预览</h2><p>{isCurrent ? "当前 AI 生成结果" : canShowResult ? "上一次生成的结果，当前配置尚未更新" : "角色参考图，选择造型后生成"}</p></div><span className={styles.status}>{isCurrent ? "AI 生成" : canShowResult ? "待更新" : "参考图"}</span></div>
-          <div className={styles.stage}><img src={canShowResult ? live.result!.image : reference.image} alt={canShowResult ? "AI 生成的角色" : `角色参考图：${live.settings.role}`} /></div>
+          <div className={styles.stage}><img src={characterAssetUrl(canShowResult ? live.result!.image : reference.image)} alt={canShowResult ? "AI 生成的角色" : `角色参考图：${live.settings.role}`} /></div>
           <div className={styles.previewBottom}><div><strong>{isCurrent ? "本次生成" : canShowResult ? "上次生成" : live.settings.role}</strong><p>{canShowResult ? "模型生成的细节与角色一致性可能有变化。" : "参考素材不是生成结果。"}</p></div><button type="button" onClick={live.clear} disabled={!live.result || live.busy}><RotateCcw size={15} /> 恢复参考图</button></div>
           <div className={styles.generateArea}>
             <button className={styles.generate} type="button" disabled={live.busy} onClick={() => { void live.generate(); }}><Sparkles size={16} /> {live.busy ? "正在生成，请稍候…" : live.result ? "重新生成" : "生成角色"}</button>
@@ -74,7 +75,7 @@ function MaterialGroup({ title, items, selectedName, onSelect }: { title: string
   return <div className={styles.materialGroup}>
     <div className={styles.sectionTitle}><div><h3>{title}</h3><p>选择素材</p></div><span>{items.length} 款</span></div>
     <div className={styles.materialOptions}>{items.map((item) => <button type="button" key={item.name} aria-label={item.name} aria-pressed={selectedName.split("|").includes(item.name)} className={`${styles.option} ${styles.materialOption} ${selectedName.split("|").includes(item.name) ? styles.selectedOption : ""}`} onClick={() => onSelect(item)}>
-      <span className={styles.materialImage}><img src={item.image} alt="" loading="lazy" /></span><span className={styles.optionName}>{item.name}</span>
+      <span className={styles.materialImage}><img src={characterAssetUrl(item.image)} alt="" loading="lazy" /></span><span className={styles.optionName}>{item.name}</span>
     </button>)}</div>
   </div>;
 }

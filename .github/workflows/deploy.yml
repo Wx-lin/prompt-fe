@@ -27,6 +27,9 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - name: Verify character assets in COS
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: node deploy/verify-character-assets.mjs "$GITHUB_SHA"
       - name: Production build
         env:
           NEXT_PUBLIC_SITE_URL: https://aigc-prompt.com
@@ -59,7 +62,11 @@ jobs:
           cp -a .next/static runtime/app/.next/static
           # Use committed files from the exact release revision, and carry them only once.
           test ! -e runtime/app/public
-          git archive "$GITHUB_SHA" public | tar -xf - -C runtime/app/
+          git archive "$GITHUB_SHA" -- public \
+            ':(exclude)public/character-library' \
+            ':(exclude)public/character-outfits' \
+            ':(exclude)public/character-visuals' \
+            ':(exclude)public/character-demo' | tar -xf - -C runtime/app/
           if find runtime -type l -print -quit | grep -q .; then
             echo 'Runtime contains symlinks; release rejected'
             exit 1

@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
+import { characterAssetUrl } from "@/lib/character-asset-url";
 import { ArrowUpRight, BookOpen } from "lucide-react";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { ThemeToggleControl } from "@/components/theme-provider/theme-toggle-control";
@@ -33,8 +34,8 @@ export function SiteHeader({ user = null, showNavigationRow = true, showCharacte
             <span className={styles.characterLabel}>{t("characterCreation")}</span>
             <span className={styles.newBadge} aria-hidden="true">NEW</span>
             <span className={styles.characterPortraits} aria-hidden="true">
-              <span><Image src="/character-library/professional-woman.png" alt="" width={130} height={195} sizes="130px" /></span>
-              <span><Image src="/character-library/urban-man.png" alt="" width={130} height={195} sizes="130px" /></span>
+              <span><Image src={characterAssetUrl("/character-library/professional-woman.png")} alt="" width={130} height={195} sizes="130px" /></span>
+              <span><Image src={characterAssetUrl("/character-library/urban-man.png")} alt="" width={130} height={195} sizes="130px" /></span>
             </span>
             <ArrowUpRight size={17} aria-hidden="true" />
           </Link>}

@@ -1,5 +1,20 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
+
+it('archives all other committed public assets while omitting the COS directories', () => {
+  const workflow = readFileSync('.github/workflows/deploy.yml', 'utf8');
+  const names = ['library', 'outfits', 'visuals', 'demo'];
+  for (const name of names) expect(workflow).toContain(`':(exclude)public/character-${name}'`);
+  expect(workflow).toContain('git archive "$GITHUB_SHA" -- public');
+  const sourceArchive = workflow.split('\n').find(line => line.includes('release/source.tar.gz'))!;
+  expect(sourceArchive).not.toMatch(/\bpublic\b/);
+  const archive = execFileSync('git', ['archive', 'HEAD', '--', 'public', ...names.map(name => `:(exclude)public/character-${name}`)]);
+  const entries = execFileSync('tar', ['-tf', '-'], { input: archive, encoding: 'utf8' }).split('\n').filter(line => line && !line.endsWith('/'));
+  const expected = execFileSync('git', ['ls-tree', '-r', '--name-only', 'HEAD', '--', 'public'], { encoding: 'utf8' }).split('\n').filter(line => line && !/^public\/character-(library|outfits|visuals|demo)\//.test(line));
+  expect(entries.sort()).toEqual(expected.sort());
+  expect(entries).toContain('public/guide/wechat-contact.jpg');
+});
 
 describe('frontend release safeguards', () => {
   it('checks archives and serializes releases before switching', () => {
@@ -142,7 +157,8 @@ it('uploads only committed production source, excluding reference screenshots', 
   for (const path of ['Dockerfile', '.dockerignore', 'package-lock.json', 'next.config.ts', 'messages', 'src', 'deploy']) expect(archiveLine).toContain(path);
   expect(archiveLine).not.toMatch(/\bpublic\b/);
   expect(workflow).toContain('test ! -e runtime/app/public');
-  expect(workflow).toContain('git archive "$GITHUB_SHA" public | tar -xf - -C runtime/app/');
+  expect(workflow).toContain('git archive "$GITHUB_SHA" -- public');
+  expect(workflow).toContain('| tar -xf - -C runtime/app/');
   expect(archiveLine).toContain('docs/user-guide.md');
   expect(archiveLine).not.toContain('docs/reference');
   expect(archiveLine).not.toContain('e2e');
