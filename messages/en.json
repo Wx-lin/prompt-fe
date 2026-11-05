@@ -105,7 +105,7 @@
     "categoryLinks": "Prompt categories",
     "paginationLabel": "Prompt pages",
     "nextPageLink": "Next page",
-    "creationPanelAriaLabel": "Prompt creation conversation"
+    "creationPanelAriaLabel": "AI creation conversation"
   },
   "card": {
     "viewAriaLabel": "View prompt: {title}",
@@ -338,8 +338,8 @@
     "referencePromptTooLong": "The prompt exceeds 500 characters. Shorten it before sending.",
     "source": "From gallery · {title}",
     "continue": "Continue creating",
-    "panelLabel": "Prompt creation conversation",
-    "title": "Prompt Studio",
+    "panelLabel": "AI creation conversation",
+    "title": "AI Studio",
     "new": "New",
     "collapse": "Collapse",
     "back": "Back to conversation",

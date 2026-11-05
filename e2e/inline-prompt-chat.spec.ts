@@ -7,7 +7,7 @@ const fixture = process.env.AIGC_PROMPT_FIXTURE_URL ?? "http://127.0.0.1:8036";
 const image = "e2e/fixtures/submission.png";
 const homeInput = "描述想生成的画面，或直接聊天";
 const followupInput = "继续提问或描述想法，也可以添加参考图";
-const panelLabel = "提示词创作对话";
+const panelLabel = "AI 创作对话";
 const emailForTest = () => `sample+inline-${test.info().project.name}-${randomUUID().slice(0, 8)}@example.test`;
 type Metrics = { calls: number; job_count: number; image_calls: number; statuses: string[]; context_prompt_hashes: string[]; conversation_count: number };
 

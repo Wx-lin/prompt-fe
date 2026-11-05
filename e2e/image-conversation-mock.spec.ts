@@ -83,7 +83,7 @@ test("queued image completes, an older result can be edited, and history restore
   await page.getByRole("textbox", { name: "描述想生成的画面，或直接聊天", exact: true }).fill(firstMessage);
   await page.getByRole("button", { name: "发送", exact: true }).click();
   await login(page, `sample+image-${info.project.name}-${randomUUID().slice(0, 8)}@example.test`);
-  const panel = page.getByRole("complementary", { name: "提示词创作对话", exact: true });
+  const panel = page.getByRole("complementary", { name: "AI 创作对话", exact: true });
   await expect(panel).toContainText(firstMessage);
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0]).toMatchObject({ mode: "smart", message: firstMessage });

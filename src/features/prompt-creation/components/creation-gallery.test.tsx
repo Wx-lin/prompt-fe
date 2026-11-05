@@ -23,7 +23,8 @@ it("shows one inline creation entry; sending opens the same-page conversation wi
   fireEvent.change(textbox, { target: { value: "雨夜的小猫" } });
   fireEvent.click(screen.getByRole("button", { name: "发送" }));
   await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledOnce());
-  expect(screen.getByRole("complementary", { name: "提示词创作对话" })).toBeVisible();
+  expect(screen.getByRole("complementary", { name: "AI 创作对话" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: /^AI 创作$/ })).toBeVisible();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(screen.getByRole("textbox")).toHaveValue("雨夜的小猫");
   fireEvent.click(screen.getByRole("button", { name: "收起" }));
@@ -53,7 +54,7 @@ it("places a gallery artwork and its prompt in the homepage composer without ope
 
   await waitFor(() => expect(screen.getByRole("textbox", { name: "描述想生成的画面，或直接聊天" })).toHaveValue("雨夜街头，霓虹灯和电影感光影"));
   expect(screen.getByRole("img", { name: "参考图片" })).toHaveAttribute("src", "/example-artwork.jpg");
-  expect(screen.queryByRole("complementary", { name: "提示词创作对话" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("complementary", { name: "AI 创作对话" })).not.toBeInTheDocument();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(importReference).not.toHaveBeenCalled();
   expect(create).not.toHaveBeenCalled();
@@ -71,7 +72,7 @@ it("loads the public prompt detail when the gallery feed has no prompt text", as
 
   await waitFor(() => expect(screen.getByRole("textbox", { name: "描述想生成的画面，或直接聊天" })).toHaveValue("完整的画面提示词"));
   expect(screen.getByRole("img", { name: "参考图片" })).toHaveAttribute("src", "/mountain.jpg");
-  expect(screen.queryByRole("complementary", { name: "提示词创作对话" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("complementary", { name: "AI 创作对话" })).not.toBeInTheDocument();
   expect(fetchMock).toHaveBeenCalledTimes(1);
   expect(importReference).not.toHaveBeenCalled();
   expect(create).not.toHaveBeenCalled();
@@ -96,7 +97,7 @@ it("does not overwrite the latest selected artwork with an earlier detail respon
 
   expect(screen.getByRole("textbox", { name: "描述想生成的画面，或直接聊天" })).toHaveValue("作品乙提示词");
   expect(screen.getByRole("img", { name: "参考图片" })).toHaveAttribute("src", "/b.jpg");
-  expect(screen.queryByRole("complementary", { name: "提示词创作对话" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("complementary", { name: "AI 创作对话" })).not.toBeInTheDocument();
 });
 
 it("keeps both the artwork prompt and the user's text typed while details load", async () => {
@@ -125,7 +126,7 @@ it("informs the user if the original artwork prompt cannot be loaded", async () 
   fireEvent.click(screen.getByRole("button", { name: "做同款" }));
 
   expect(await screen.findByRole("alert")).toBeVisible();
-  expect(screen.queryByRole("complementary", { name: "提示词创作对话" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("complementary", { name: "AI 创作对话" })).not.toBeInTheDocument();
   expect(create).not.toHaveBeenCalled();
 });
 

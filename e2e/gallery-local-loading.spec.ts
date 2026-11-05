@@ -39,7 +39,7 @@ function captureShell(page: Page): Promise<JSHandle<ShellNodes>> {
     toolbar: document.querySelector("[data-gallery-toolbar]"),
     filters: document.querySelector('[aria-label="画廊筛选"]'),
     search: document.querySelector('input[aria-label="搜索关键词"]'),
-    panel: document.querySelector('aside[aria-label="提示词创作对话"]'),
+    panel: document.querySelector('aside[aria-label="AI 创作对话"]'),
   }));
 }
 async function sameShell(page: Page, saved: JSHandle<ShellNodes>) {
@@ -47,7 +47,7 @@ async function sameShell(page: Page, saved: JSHandle<ShellNodes>) {
     const selectors = {
       header: "[data-site-topbar]", composer: "textarea", toolbar: "[data-gallery-toolbar]",
       filters: '[aria-label="画廊筛选"]', search: 'input[aria-label="搜索关键词"]',
-      panel: 'aside[aria-label="提示词创作对话"]',
+      panel: 'aside[aria-label="AI 创作对话"]',
     };
     return Object.entries(selectors).every(([key, selector]) => {
       const previous = nodes[key as keyof typeof nodes];

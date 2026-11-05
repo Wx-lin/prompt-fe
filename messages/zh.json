@@ -105,7 +105,7 @@
     "categoryLinks": "按用途浏览提示词",
     "paginationLabel": "作品分页",
     "nextPageLink": "下一页作品",
-    "creationPanelAriaLabel": "提示词创作对话"
+    "creationPanelAriaLabel": "AI 创作对话"
   },
   "card": {
     "viewAriaLabel": "查看提示词：{title}",
@@ -338,8 +338,8 @@
     "referencePromptTooLong": "提示词超过 500 字，请删减至 500 字以内后发送。",
     "source": "来自图库 · {title}",
     "continue": "继续上次创作",
-    "panelLabel": "提示词创作对话",
-    "title": "提示词创作",
+    "panelLabel": "AI 创作对话",
+    "title": "AI 创作",
     "new": "新建",
     "collapse": "收起",
     "back": "返回对话",

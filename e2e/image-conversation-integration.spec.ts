@@ -62,7 +62,7 @@ test("real conversation API persists generated images, follows earlier reference
     expect(created.status()).toBe(202);
     expect(created.request().postDataJSON()).toMatchObject({ mode: "smart" });
     const initial = (await created.json()).data as { conversation_id: string };
-    const panel = page.getByRole("complementary", { name: "提示词创作对话", exact: true });
+    const panel = page.getByRole("complementary", { name: "AI 创作对话", exact: true });
     const progress = panel.getByRole("progressbar", { name: "预计生成进度" });
     await expect(progress).toBeVisible({ timeout: 25_000 });
     await expect(panel.getByRole("status")).toContainText("正在生成图片");
@@ -163,7 +163,7 @@ test("smart input can answer casual conversation without generating an image", a
   await login(page, email);
   const created = await pendingCreate;
   expect(created.request().postDataJSON()).toMatchObject({ mode: "smart" });
-  const panel = page.getByRole("complementary", { name: "提示词创作对话", exact: true });
+  const panel = page.getByRole("complementary", { name: "AI 创作对话", exact: true });
   await expect(panel.getByText("你好！可以随便聊聊，也可以一起讨论创作。")).toBeVisible({ timeout: 25_000 });
   expect((await metrics(request, email)).calls).toBe(1);
   await expect(panel.getByRole("img", { name: "生成的图片" })).toHaveCount(0);

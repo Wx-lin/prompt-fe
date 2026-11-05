@@ -61,7 +61,7 @@ test("casual replies and prompt versions share private history without losing ed
   const response = await created;
   expect(response.status()).toBe(202);
   expect(response.request().postDataJSON()).not.toHaveProperty("mode", "generate");
-  const panel = page.getByRole("complementary", { name: "提示词创作对话", exact: true });
+  const panel = page.getByRole("complementary", { name: "AI 创作对话", exact: true });
   await expect(panel.getByText(firstReply, { exact: true })).toBeVisible();
   await expect(panel.getByRole("button", { name: /^版本 \d/ })).toHaveCount(0);
   await expect(panel.getByRole("button", { name: "换一种风格", exact: true })).toHaveCount(0);

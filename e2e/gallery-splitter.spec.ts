@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const splitterName = "调整聊天面板宽度";
-const panelName = "提示词创作对话";
+const panelName = "AI 创作对话";
 const followupName = "继续提问或描述想法，也可以添加参考图";
 
 async function openChat(page: Page) {
@@ -108,7 +108,7 @@ test("narrowest chat keeps English controls inside the pane", async ({ page }, i
   await page.getByRole("textbox", { name: "Describe an image or start a conversation", exact: true }).fill("Test creation");
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await page.getByRole("link", { name: "Close login", exact: true }).click();
-  const panel = page.getByRole("complementary", { name: "Prompt creation conversation", exact: true });
+  const panel = page.getByRole("complementary", { name: "AI creation conversation", exact: true });
   const divider = page.getByRole("separator", { name: "Resize chat panel", exact: true });
   await expect(divider).toBeVisible();
   await divider.focus();

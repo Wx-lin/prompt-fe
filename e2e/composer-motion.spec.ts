@@ -34,7 +34,7 @@ for (const reduce of [false, true]) test(`inline gallery motion is ${reduce ? "d
   });
   const reference = page.getByRole("button", { name: /图片创作提示词/ }).filter({ visible: true }).first();
   await reference.click();
-  const panel = page.getByRole("complementary", { name: "提示词创作对话", exact: true });
+  const panel = page.getByRole("complementary", { name: "AI 创作对话", exact: true });
   await expect(panel).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.galleryMotionSamples.length)).toBe(22);
   const samples = await page.evaluate(() => window.galleryMotionSamples);

@@ -42,7 +42,7 @@ test("queued and thinking states are compact, and image generation retains its o
     await page.getByRole("textbox", { name: "描述想生成的画面，或直接聊天", exact: true }).fill("画一张夜晚的海边");
     await page.getByRole("button", { name: "发送", exact: true }).click();
     await login(page, email);
-    const panel = page.getByRole("complementary", { name: "提示词创作对话", exact: true });
+    const panel = page.getByRole("complementary", { name: "AI 创作对话", exact: true });
     const status = panel.getByRole("status");
     await expect(status).toContainText("排队中", { timeout: 20_000 });
     await expect(panel.locator('[class*="skeleton"]')).toHaveCount(0);
