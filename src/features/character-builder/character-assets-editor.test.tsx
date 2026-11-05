@@ -16,6 +16,16 @@ beforeEach(() => { sessionStorage.clear(); localStorage.clear(); vi.mocked(readD
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); history.replaceState(null, "", "/"); });
 
 describe("角色资产编辑", () => {
+  it("旧角色图片签名缺少新增的 AI 补充字段时仍是当前预览", async () => {
+    history.replaceState(null, "", "/character-setting?asset=old");
+    const values = createInitialValues();
+    delete values.aiDetails;
+    const preview_signature = JSON.stringify([values, null, values.outfitNotes, "平静"]);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { id: "old", name: values.name, values, template: "basic", model: "通用", preview_image_base64: "dGVzdA==", preview_signature } }), { status: 200 })));
+    render(<CharacterBuilder user={user} />);
+    await screen.findByAltText("AI 生成的角色预览");
+    expect(screen.getByText("本次生成结果")).toBeVisible();
+  });
   it("未登录保存时提示登录且不发送请求", () => {
     const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
     render(<CharacterBuilder />);

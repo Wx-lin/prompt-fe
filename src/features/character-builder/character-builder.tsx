@@ -10,6 +10,7 @@ import { SiteHeader } from "@/features/gallery/components/site-header";
 import type { CurrentUser } from "@/types/prompt";
 import { GROUPS, MODELS, TEMPLATES, createInitialValues, type CharacterValues, type TemplateId } from "./character-data";
 import { buildOutputs, translateValue } from "./prompt-builder";
+import { applyCharacterInterpretation } from "./character-ai";
 import { FieldGroup } from "./character-fields";
 import { CharacterSelect } from "./character-select";
 import { CharacterWorkbench, type CharacterPreviewResult } from "./character-workbench";
@@ -20,7 +21,7 @@ import { BUILT_IN_PRESETS, DRAFT_KEY, MAX_IMPORT_BYTES, PRESET_KEY, parseFile, p
 import styles from "./character-builder.module.css";
 import feedback from "./character-feedback.module.css";
 
-type UndoState = { kind: "replace"; values: CharacterValues; template: TemplateId; model: string } | { kind: "outfit"; values: Readonly<Record<string, string>> };
+type UndoState = { kind: "replace"; values: CharacterValues; template: TemplateId; model: string; touched: readonly string[] } | { kind: "outfit"; values: Readonly<Record<string, string>>; touched: readonly string[] };
 
 type OutputKey = "zh" | "en" | "bilingual" | "negative" | "json" | "parameters";
 const outputTypes: ReadonlyArray<{ id: OutputKey; zh: string; en: string }> = [
@@ -54,6 +55,7 @@ export function CharacterBuilder({ locale = "zh", user = null }: { locale?: stri
   const savedPreset = useRef<{ name: string; snapshot: string } | null>(null);
   const [draftReady, setDraftReady] = useState(false);
   const [entryMode, setEntryMode] = useState<"default" | "new" | "edit">("default");
+  const [workbenchEntry, setWorkbenchEntry] = useState<"default" | "new" | "edit">("default");
   const [draftKey, setDraftKey] = useState(DRAFT_KEY);
   const [assetId, setAssetId] = useState<string | null>(null);
   const [assetBusy, setAssetBusy] = useState(false);
@@ -70,6 +72,7 @@ export function CharacterBuilder({ locale = "zh", user = null }: { locale?: stri
   const latestImage = useRef<CharacterPreviewResult | null>(null);
   const draftScope = useRef(DRAFT_KEY);
   const navigatingToLogin = useRef(false);
+  const touchedFields = useRef<Set<string>>(new Set());
   const importRef = useRef<HTMLInputElement>(null);
   const data = useMemo(() => buildOutputs(values, template, model), [values, template, model]);
   const content = output === "bilingual" ? `${data.zh}\n\n${data.en}` : data[output];
@@ -87,13 +90,19 @@ export function CharacterBuilder({ locale = "zh", user = null }: { locale?: stri
       const params = new URLSearchParams(window.location.search);
       const presetId = params.get("preset"), requestedAssetId = params.get("asset"), createNew = params.get("new") === "1";
       setEntryMode(presetId || requestedAssetId ? "edit" : createNew ? "new" : "default");
+      setWorkbenchEntry(presetId || requestedAssetId ? "edit" : createNew ? "new" : "default");
       const scopedKey = characterDraftKey(window.location.search);
       draftScope.current = scopedKey; setDraftKey(scopedKey);
       consumeCharacterLoginResume(scopedKey);
       const fresh = consumeCharacterFreshStart(scopedKey) && createNew;
-      if (fresh) { sessionStorage.removeItem(scopedKey); pendingImageWrite.current = storeDraftImage(scopedKey, null); }
+      if (fresh) { sessionStorage.removeItem(scopedKey); sessionStorage.removeItem(`${scopedKey}:touched`); sessionStorage.removeItem(`character-ai:${window.location.search}`); pendingImageWrite.current = storeDraftImage(scopedKey, null); }
       const raw = fresh ? null : sessionStorage.getItem(scopedKey);
       const draft = raw ? parseFile(raw) : null;
+      if (draft) {
+        const savedTouched: unknown = JSON.parse(sessionStorage.getItem(`${scopedKey}:touched`) ?? "null");
+        const defaults = createInitialValues();
+        touchedFields.current = new Set(Array.isArray(savedTouched) && savedTouched.every((key) => typeof key === "string") ? savedTouched : Object.keys(draft.values).filter((key) => draft.values[key] !== defaults[key]));
+      }
       const official = presetId ? getOfficialCharacter(presetId) : undefined;
       if (official) setExampleImage(official.image);
       if (requestedAssetId) {
@@ -161,6 +170,10 @@ export function CharacterBuilder({ locale = "zh", user = null }: { locale?: stri
   }, [dirty]);
   function notify(text: string) { setError(""); setMessage(text); }
   function fail(text: string) { setMessage(""); setError(text); }
+  function setTouched(next: Set<string>) {
+    touchedFields.current = next;
+    try { sessionStorage.setItem(`${draftScope.current}:touched`, JSON.stringify([...next])); } catch { /* Other draft saving reports storage errors. */ }
+  }
   function queueDraftImage(scope: string, image: CharacterPreviewResult) {
     const previous = pendingImageWrite.current;
     const pending = (previous ? previous.catch(() => false) : Promise.resolve(true)).then(() => storeDraftImage(scope, image));
@@ -210,13 +223,15 @@ export function CharacterBuilder({ locale = "zh", user = null }: { locale?: stri
     notify(tr("预设已应用，可以撤销。", "Preset applied; you can undo this."));
   }
   function replaceValues(next: CharacterValues, nextTemplate: TemplateId, nextModel: string) {
-    setUndoStates((previous) => [...previous, { kind: "replace", values: { ...values }, template, model }]);
+    setUndoStates((previous) => [...previous, { kind: "replace", values: { ...values }, template, model, touched: [...touchedFields.current] }]);
+    setTouched(new Set(Object.keys(next)));
     setValues({ ...next }); setTemplate(nextTemplate); setModel(nextModel);
     setOutput(next.outputLanguage === "英文" ? "en" : next.outputLanguage === "中英双语" ? "bilingual" : "zh");
   }
   function undo() {
     const undoState = undoStates.at(-1);
     if (!undoState) return;
+    setTouched(new Set(undoState.touched));
     if (undoState.kind === "outfit") {
       setValues((previous) => ({ ...previous, ...undoState.values }));
     } else {
@@ -264,10 +279,16 @@ export function CharacterBuilder({ locale = "zh", user = null }: { locale?: stri
       const savedId = String(body.data.id);
       setAssetId(savedId); setSavedSnapshot(JSON.stringify([values, template, model])); setSavedImageSrc(imageResult?.src ?? null);
       if (!assetId) {
+        const previousSearch = window.location.search;
         const url = new URL(window.location.href);
         url.search = ""; url.searchParams.set("asset", savedId);
         window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}`);
         const nextScope = characterDraftKey(url.search);
+        try {
+          const input = sessionStorage.getItem(`character-ai:${previousSearch}`);
+          if (input !== null) sessionStorage.setItem(`character-ai:${url.search}`, input);
+          sessionStorage.setItem(`${nextScope}:touched`, JSON.stringify([...touchedFields.current]));
+        } catch { /* The existing save result remains valid if tab storage is unavailable. */ }
         draftScope.current = nextScope; setDraftKey(nextScope); setEntryMode("edit");
         if (latestImage.current && latestImage.current.src !== imageResult?.src) queueDraftImage(nextScope, latestImage.current);
       }
@@ -295,8 +316,17 @@ export function CharacterBuilder({ locale = "zh", user = null }: { locale?: stri
   }
   function reset() { replaceValues(createInitialValues(), TEMPLATES[0].id, MODELS[0]); notify(tr("已恢复默认配置，可以撤销。", "Default configuration restored; you can undo this.")); }
   function changeField(id: string, value: string) {
+    setTouched(new Set([...touchedFields.current, id]));
     setValues((previous) => ({ ...previous, [id]: value }));
     if (id === "outputLanguage") setOutput(value === "英文" ? "en" : value === "中英双语" ? "bilingual" : "zh");
+  }
+  function applyAi(input: unknown, clearDefaults: boolean): CharacterValues {
+    const next = applyCharacterInterpretation(values, input, { clearDefaults, touched: touchedFields.current });
+    setUndoStates((previous) => [...previous, { kind: "replace", values: { ...values }, template, model, touched: [...touchedFields.current] }]);
+    setTouched(new Set(Object.keys(next)));
+    setValues(next);
+    notify(tr("角色配置已更新，可以撤销。", "Character settings updated; you can undo this."));
+    return next;
   }
   function guardLeave(event: React.MouseEvent) {
     const target = event.target instanceof Element ? event.target.closest("a[href]") : null;
@@ -310,7 +340,7 @@ export function CharacterBuilder({ locale = "zh", user = null }: { locale?: stri
       <Link href={entryMode === "default" ? "/" : "/character-library"} className={styles.back} onClick={guardLeave}><ArrowLeft size={16} />{entryMode === "default" ? tr("返回首页", "Back to home") : tr("返回角色库", "Back to character library")}</Link>
       <div className={styles.title}><div><h1>{entryMode === "edit" ? tr("编辑角色", "Edit character") : entryMode === "new" ? tr("创建角色", "Create character") : tr("角色设定", "Character setup")}</h1><p>{tr("调整角色设定，生成提示词和角色预览。", "Build character prompts and generate a preview.")}</p></div><div className={styles.fileActions}><a href="#character-templates" onClick={() => setAdvancedOpen(true)} className={styles.templateJump}>{tr("提示词与模板", "Prompts and templates")}</a><input type="file" ref={importRef} accept="application/json,.json" aria-label={tr("导入配置文件", "Import configuration file")} hidden onChange={(event) => { void importFile(event.target.files?.[0]); event.currentTarget.value = ""; }} /><button type="button" onClick={() => importRef.current?.click()}><Upload size={16} />{tr("导入", "Import")}</button><button type="button" onClick={exportFile}><Download size={16} />{tr("导出", "Export")}</button><button type="button" onClick={reset}>{tr("重置", "Reset")}</button><button type="button" className={styles.saveAsset} onClick={() => void saveAsset()} disabled={assetBusy || !assetReady || assetLoadError}>{assetBusy ? tr("保存中…", "Saving…") : tr("保存到我的角色库", "Save to my library")}</button></div></div>
       {(message || error || undoStates.length > 0) && <div id="character-change-notice" className={`${error ? styles.error : styles.message} ${feedback.notice}`} role={error ? "alert" : "status"}><span>{error || message || tr("可以撤销之前的替换。", "You can undo a previous replacement.")}</span>{assetLoginNeeded && <button type="button" onClick={() => setLoginOpen(true)}>{tr("登录后打开角色", "Sign in to open your character")}</button>}{undoStates.length > 0 && <button type="button" onClick={undo}>{tr("撤销替换", "Undo replacement")}</button>}</div>}
-      {assetReady && !assetLoadError ? <CharacterWorkbench key={`${entryMode}:${imageVersion}`} initialCategory={entryMode === "new" ? "basic" : entryMode === "edit" ? "face" : "clothing"} values={values} en={en} authenticated={Boolean(user)} initialPreview={imageResult} exampleImage={exampleImage} onBeforeLogin={prepareLogin} onPreviewChange={(preview) => { latestImage.current = preview; setImageResult(preview); queueDraftImage(draftScope.current, preview); }} onAdvanced={() => setAdvancedOpen(true)} onCopyPrompt={() => void copy("workbench")} copyResult={copyFeedback?.target === "workbench" && copyFeedback.content === content ? copyFeedback.success : null} onChange={changeField} canUndo={undoStates.length > 0} onApplyOutfit={(changes) => { const previousOutfit = Object.fromEntries(Object.keys(changes).map((key) => [key, values[key] ?? ""])); setUndoStates((previous) => [...previous, { kind: "outfit", values: previousOutfit }]); setValues((previous) => ({ ...previous, ...changes })); notify(tr("已替换服装配置，可以撤销。", "Outfit settings replaced; you can undo this.")); }} /> : !assetReady ? <p role="status">{tr("正在加载角色…", "Loading character…")}</p> : null}
+      {assetReady && !assetLoadError ? <CharacterWorkbench key={`${workbenchEntry}:${imageVersion}`} initialCategory={workbenchEntry === "new" ? "basic" : workbenchEntry === "edit" ? "face" : "clothing"} values={values} en={en} authenticated={Boolean(user)} newCharacter={entryMode !== "edit"} initialPreview={imageResult} exampleImage={exampleImage} onBeforeLogin={prepareLogin} onApplyAi={applyAi} onPreviewChange={(preview) => { latestImage.current = preview; setImageResult(preview); queueDraftImage(draftScope.current, preview); }} onAdvanced={() => setAdvancedOpen(true)} onCopyPrompt={() => void copy("workbench")} copyResult={copyFeedback?.target === "workbench" && copyFeedback.content === content ? copyFeedback.success : null} onChange={changeField} canUndo={undoStates.length > 0} onApplyOutfit={(changes) => { const previousTouched = [...touchedFields.current]; setTouched(new Set([...previousTouched, ...Object.keys(changes)])); const previousOutfit = Object.fromEntries(Object.keys(changes).map((key) => [key, values[key] ?? ""])); setUndoStates((previous) => [...previous, { kind: "outfit", values: previousOutfit, touched: previousTouched }]); setValues((previous) => ({ ...previous, ...changes })); notify(tr("已替换服装配置，可以撤销。", "Outfit settings replaced; you can undo this.")); }} /> : !assetReady ? <p role="status">{tr("正在加载角色…", "Loading character…")}</p> : null}
       <details id="advanced-character-options" className={styles.advancedDetails} open={advancedOpen} onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}><summary>{tr("高级设置与提示词预览", "Advanced settings and prompt preview")}</summary>
       <details className={styles.presets}><summary>{tr("预设管理", "Preset management")}<span>{tr("内置与本机预设", "Built-in and local presets")}</span></summary>
         <div className={styles.presetControls}><div className={styles.selectControl}><span>{tr("选择预设", "Select preset")}</span><CharacterSelect label={tr("选择预设", "Select preset")} value={selected} onChange={setSelected} options={[{ value: "", label: tr("选择预设", "Select preset") }, ...BUILT_IN_PRESETS.map((preset) => ({ value: `builtin:${preset.name}`, label: preset.name, group: tr("内置预设", "Built-in presets") })), ...presets.map((preset) => ({ value: `local:${preset.name}`, label: preset.name, group: tr("本机预设", "Local presets") }))]} /></div><button type="button" disabled={!selected} onClick={apply}>{tr("应用预设", "Apply preset")}</button><button type="button" disabled={!selected || selected.startsWith("builtin:")} onClick={() => setConfirmDelete(true)}>{tr("删除预设", "Delete preset")}</button><label><span>{tr("预设名称", "Preset name")}</span><input aria-label={tr("预设名称", "Preset name")} value={name} maxLength={80} placeholder={tr("给当前配置命名", "Name this setup")} onChange={(event) => setName(event.target.value)} /></label><button type="button" onClick={save}>{tr("保存预设", "Save preset")}</button></div>

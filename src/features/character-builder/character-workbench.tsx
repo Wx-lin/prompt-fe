@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { characterAssetUrl } from "@/lib/character-asset-url";
 import { Tabs } from "@base-ui/react/tabs";
@@ -9,6 +9,7 @@ import { Check, Download, FileText, PersonStanding, Shirt, Smile, UserRound, Set
 import { GROUPS, UNSPECIFIED, type CharacterValues } from "./character-data";
 import { CharacterVisualControls } from "./character-visual-controls";
 import { CharacterFieldControl } from "./character-fields";
+import { CharacterAiComposer } from "./character-ai-composer";
 import { markCharacterLoginResume } from "./character-draft-scope";
 import { findOutfit, OUTFITS, OUTFIT_FILTERS, OUTFIT_FILTER_ENGLISH, type OutfitFilter } from "./character-outfits";
 import styles from "./character-workbench.module.css";
@@ -24,15 +25,26 @@ const categories = [
 const promptGroups = new Set(["basic", "role", "face", "hair", "body", "skin", "makeup", "expression"]);
 
 export type CharacterPreviewResult = { src: string; signature: string };
-type Props = { values: CharacterValues; en: boolean; onChange: (id: string, value: string) => void; onApplyOutfit: (changes: Readonly<Record<string, string>>) => void; canUndo: boolean; authenticated?: boolean; initialPreview?: CharacterPreviewResult | null; exampleImage?: string | null; onPreviewChange?: (result: CharacterPreviewResult) => void; onCopyPrompt?: () => void; copyResult?: boolean | null; onAdvanced?: () => void; onBeforeLogin?: () => Promise<boolean>; initialCategory?: Category };
+type Props = { values: CharacterValues; en: boolean; onChange: (id: string, value: string) => void; onApplyOutfit: (changes: Readonly<Record<string, string>>) => void; onApplyAi?: (input: unknown, clearDefaults: boolean) => CharacterValues; newCharacter?: boolean; canUndo: boolean; authenticated?: boolean; initialPreview?: CharacterPreviewResult | null; exampleImage?: string | null; onPreviewChange?: (result: CharacterPreviewResult) => void; onCopyPrompt?: () => void; copyResult?: boolean | null; onAdvanced?: () => void; onBeforeLogin?: () => Promise<boolean>; initialCategory?: Category };
+function previewMatches(saved: string, current: string): boolean {
+  if (saved === current) return true;
+  try {
+    const oldParts: unknown = JSON.parse(saved), newParts: unknown = JSON.parse(current);
+    if (!Array.isArray(oldParts) || !Array.isArray(newParts) || oldParts.length !== 4 || newParts.length !== 4 || !oldParts[0] || typeof oldParts[0] !== "object" || Array.isArray(oldParts[0]) || !newParts[0] || typeof newParts[0] !== "object" || Array.isArray(newParts[0])) return false;
+    const oldValues = { ...oldParts[0] } as Record<string, unknown>, newValues = newParts[0] as Record<string, unknown>;
+    if (!("aiDetails" in oldValues)) oldValues.aiDetails = UNSPECIFIED;
+    const keys = Object.keys(newValues);
+    return keys.length === Object.keys(oldValues).length && keys.every((key) => oldValues[key] === newValues[key]) && JSON.stringify(oldParts.slice(1)) === JSON.stringify(newParts.slice(1));
+  } catch { return false; }
+}
 function buildImagePrompt(values: CharacterValues, outfit: string, extra: string, previewExpression: string) {
   const details = GROUPS.filter((group) => promptGroups.has(group.id)).flatMap((group) => group.fields
     .filter((field) => field.type !== "toggle" && field.id !== "expressions" && !(previewExpression && ["baseExpression", "emotion"].includes(field.id)) && values[field.id]?.trim() && values[field.id] !== UNSPECIFIED)
     .map((field) => `${field.label}：${values[field.id]}`));
-  return ["生成单张写实人物全身肖像，头顶到鞋子完整入画，摄影棚背景，柔和立体光线。不要拼图、文字或水印。", ...details, previewExpression ? `预览表情：${previewExpression}` : "", `服装：${outfit}。`, ...["clothingStyle", "clothingColor", "material", "fit", "exposure"].map((key) => values[key] && values[key] !== UNSPECIFIED ? `${key === "clothingStyle" ? "服装风格" : key === "clothingColor" ? "服装颜色" : key === "material" ? "材质" : key === "fit" ? "版型" : "露肤范围"}：${values[key]}` : ""), extra ? `造型补充：${extra}` : ""].filter(Boolean).join("\n");
+  return ["生成单张写实人物全身肖像，头顶到鞋子完整入画，摄影棚背景，柔和立体光线。不要拼图、文字或水印。", ...details, previewExpression ? `预览表情：${previewExpression}` : "", outfit ? `服装：${outfit}。` : "", ...["clothingStyle", "clothingColor", "material", "fit", "exposure"].map((key) => values[key] && values[key] !== UNSPECIFIED ? `${key === "clothingStyle" ? "服装风格" : key === "clothingColor" ? "服装颜色" : key === "material" ? "材质" : key === "fit" ? "版型" : "露肤范围"}：${values[key]}` : ""), extra && extra !== UNSPECIFIED ? `造型补充：${extra}` : ""].filter(Boolean).join("\n");
 }
 
-export function CharacterWorkbench({ values, en, onChange, onApplyOutfit, canUndo, authenticated = true, initialPreview = null, exampleImage, onPreviewChange, onCopyPrompt, copyResult = null, onAdvanced, onBeforeLogin, initialCategory = "clothing" }: Props) {
+export function CharacterWorkbench({ values, en, onChange, onApplyOutfit, onApplyAi, newCharacter = false, canUndo, authenticated = true, initialPreview = null, exampleImage, onPreviewChange, onCopyPrompt, copyResult = null, onAdvanced, onBeforeLogin, initialCategory = "clothing" }: Props) {
   const tr = (zh: string, english: string) => en ? english : zh;
   const [category, setCategory] = useState<Category>(initialCategory);
   const activeCategory = category === "hair" ? "face" : category === "skin" ? "body" : category === "makeup" ? "clothing" : category;
@@ -46,9 +58,14 @@ export function CharacterWorkbench({ values, en, onChange, onApplyOutfit, canUnd
   const [result, setResult] = useState<CharacterPreviewResult | null>(initialPreview);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [aiError, setAiError] = useState("");
+  const [aiDescription, setAiDescription] = useState("");
   const [loginOpen, setLoginOpen] = useState(false);
   const inFlight = useRef<AbortController | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const latestValues = useRef(values);
+  const applyAi = useRef(onApplyAi);
+  useLayoutEffect(() => { latestValues.current = values; applyAi.current = onApplyAi; }, [values, onApplyAi]);
   const outfit = findOutfit(values);
   const filter = chosenFilter ?? outfit?.style ?? "现代";
   const selected = outfit?.id ?? null;
@@ -58,6 +75,26 @@ export function CharacterWorkbench({ values, en, onChange, onApplyOutfit, canUnd
   const choosePreviewExpression = (value: string) => { setPreviewExpression(value); onChange("baseExpression", value); };
   const signature = useMemo(() => JSON.stringify([values, selected, extra, activePreviewExpression]), [values, selected, extra, activePreviewExpression]);
   useEffect(() => () => { inFlight.current?.abort(); }, []);
+  useEffect(() => {
+    try { const saved = sessionStorage.getItem(`character-ai:${window.location.search}`); if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- restore this tab's input after hydration
+      setAiDescription(saved);
+    } } catch { /* The input remains available without tab storage. */ }
+  }, []);
+
+  async function requestImage(controller: AbortController, imageValues: CharacterValues, imageExpression: string) {
+    const chosenOutfit = findOutfit(imageValues);
+    const notes = imageValues.outfitNotes ?? "";
+    const clothing = chosenOutfit?.description ?? [imageValues.clothingCategory, imageValues.top, imageValues.bottom, imageValues.shoes].filter((value) => value && value !== UNSPECIFIED).join("，");
+    const response = await fetch("/api/character-preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: buildImagePrompt(imageValues, clothing, notes, imageExpression), aspect_ratio: "3:4" }), signal: controller.signal });
+    if (response.status === 401) { setLoginOpen(true); return; }
+    if (!response.ok) throw new Error(response.status === 429 ? tr("生成次数已达上限，请稍后重试。", "Generation limit reached. Please try again later.") : response.status === 503 ? tr("角色预览服务暂不可用，请检查服务和 API 配置后重试。", "Preview service is unavailable. Check the service and API configuration.") : response.status === 502 ? tr("角色预览服务异常，请检查模型权限或稍后重试。", "Preview service failed. Check model access or try again later.") : tr("暂时无法生成，请稍后重试。", "Unable to generate. Please try again."));
+    const body: unknown = await response.json();
+    const data = body && typeof body === "object" && "data" in body ? body.data : null;
+    if (!data || typeof data !== "object" || !("image_base64" in data) || !("mime_type" in data) || data.mime_type !== "image/png" || typeof data.image_base64 !== "string" || !/^[A-Za-z0-9+/]+={0,2}$/.test(data.image_base64)) throw new Error(tr("生成结果异常，请重试。", "Invalid image response. Please try again."));
+    const nextResult = { src: `data:image/png;base64,${data.image_base64}`, signature: JSON.stringify([imageValues, chosenOutfit?.id ?? null, notes, imageExpression]) };
+    setResult(nextResult); onPreviewChange?.(nextResult);
+  }
 
   async function generate() {
     if (!authenticated) { setLoginOpen(true); return; }
@@ -69,17 +106,36 @@ export function CharacterWorkbench({ values, en, onChange, onApplyOutfit, canUnd
       stageRef.current?.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     }
     try {
-      const clothing = outfit?.description ?? [values.clothingCategory, values.top, values.bottom, values.shoes].filter((value) => value && value !== UNSPECIFIED).join("，");
-      const response = await fetch("/api/character-preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: buildImagePrompt(values, clothing, extra, activePreviewExpression), aspect_ratio: "3:4" }), signal: controller.signal });
-      if (response.status === 401) { setLoginOpen(true); return; }
-      if (!response.ok) throw new Error(response.status === 429 ? tr("生成次数已达上限，请稍后重试。", "Generation limit reached. Please try again later.") : response.status === 503 ? tr("角色预览服务暂不可用，请检查服务和 API 配置后重试。", "Preview service is unavailable. Check the service and API configuration.") : response.status === 502 ? tr("角色预览服务异常，请检查模型权限或稍后重试。", "Preview service failed. Check model access or try again later.") : tr("暂时无法生成，请稍后重试。", "Unable to generate. Please try again."));
-      const body: unknown = await response.json();
-      const data = body && typeof body === "object" && "data" in body ? body.data : null;
-      if (!data || typeof data !== "object" || !("image_base64" in data) || !("mime_type" in data) || data.mime_type !== "image/png" || typeof data.image_base64 !== "string" || !/^[A-Za-z0-9+/]+={0,2}$/.test(data.image_base64)) throw new Error(tr("生成结果异常，请重试。", "Invalid image response. Please try again."));
-      const nextResult = { src: `data:image/png;base64,${data.image_base64}`, signature };
-      setResult(nextResult); onPreviewChange?.(nextResult);
+      await requestImage(controller, values, activePreviewExpression);
     } catch (err) {
       if (!controller.signal.aborted) setError(err instanceof Error && !(err instanceof TypeError) ? err.message : tr("暂时无法生成，请检查网络后重试。", "Unable to generate. Check your connection."));
+    } finally { if (inFlight.current === controller) { inFlight.current = null; setBusy(false); } }
+  }
+  async function generateFromDescription() {
+    if (!authenticated) { setLoginOpen(true); return; }
+    if (inFlight.current || !aiDescription.trim() || !applyAi.current) return;
+    const controller = new AbortController();
+    inFlight.current = controller;
+    const baseline = JSON.stringify(latestValues.current);
+    setBusy(true); setAiError(""); setError("");
+    try {
+      const existingDetails = latestValues.current.aiDetails;
+      const currentDetails = existingDetails && existingDetails !== UNSPECIFIED ? existingDetails : "";
+      const response = await fetch("/api/character-interpret", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ description: aiDescription.trim(), current_details: currentDetails }), signal: controller.signal });
+      if (response.status === 401) { setLoginOpen(true); return; }
+      if (!response.ok) throw new Error(response.status === 429 ? tr("操作过于频繁，请稍后重试。", "Too many requests. Please try again later.") : tr("角色描述解析失败，请稍后重试。", "Could not interpret the description. Please try again."));
+      const body: unknown = await response.json();
+      if (baseline !== JSON.stringify(latestValues.current)) throw new Error(tr("配置已变更，请重新生成以保留你的修改。", "Settings changed. Generate again to keep your edits."));
+      if (!body || typeof body !== "object" || !("data" in body) || !applyAi.current) throw new Error(tr("角色描述解析结果异常，请重试。", "Invalid interpretation. Please try again."));
+      let next: CharacterValues;
+      try { next = applyAi.current(body.data, newCharacter); } catch { throw new Error(tr("角色描述解析结果异常，请重试。", "Invalid interpretation. Please try again.")); }
+      const choices = (next.expressions ?? "").split(/[，,]/).map((value) => value.trim()).filter((value) => value && value !== UNSPECIFIED && value !== "无");
+      const nextExpression = choices.includes(next.baseExpression) ? next.baseExpression : choices[0] ?? "";
+      setPreviewExpression(nextExpression);
+      try { await requestImage(controller, next, nextExpression); }
+      catch (err) { throw new Error(tr("配置已更新，但图片生成失败；请重试。", "Settings updated, but the image could not be generated. Please retry."), { cause: err }); }
+    } catch (err) {
+      if (!controller.signal.aborted) setAiError(err instanceof Error && !(err instanceof TypeError) ? err.message : tr("暂时无法生成，请检查网络后重试。", "Unable to generate. Check your connection."));
     } finally { if (inFlight.current === controller) { inFlight.current = null; setBusy(false); } }
   }
   return <section className={styles.workbench} aria-label={tr("角色造型工作台", "Character styling workspace")}>
@@ -87,15 +143,16 @@ export function CharacterWorkbench({ values, en, onChange, onApplyOutfit, canUnd
     <div className={styles.stage} ref={stageRef}>
       <div className={styles.stageLabel}>{result ? tr("AI 生成预览", "AI preview") : source ? tr("角色示例", "Example character") : tr("角色预览", "Character preview")}</div>
       <div className={styles.viewSwitch} aria-label={tr("预览范围", "Preview framing")}><button type="button" aria-pressed={view === "half"} onClick={() => setView("half")}>{tr("半身", "Upper body")}</button><button type="button" aria-pressed={view === "full"} onClick={() => setView("full")}>{tr("全身", "Full body")}</button></div>
-      <div className={view === "half" ? styles.stageImageHalf : styles.stageImageFull}>
+      <div className={`${view === "half" ? styles.stageImageHalf : styles.stageImageFull} ${onApplyAi && view === "full" ? styles.stageImageWithComposer : ""}`}>
       {source ? <Image src={characterAssetUrl(source)} width={1024} height={1536} alt={result ? tr("AI 生成的角色预览", "AI character preview") : tr("角色示例图", "Example character")} unoptimized={Boolean(result)} priority /> : <div className={styles.stagePlaceholder}><UserRound size={48} strokeWidth={1.2} /><span>{tr("尚未生成角色预览", "No character preview yet")}</span></div>}
+      {onApplyAi && <CharacterAiComposer en={en} value={aiDescription} onChange={(value) => { setAiDescription(value); setAiError(""); try { sessionStorage.setItem(`character-ai:${window.location.search}`, value); } catch { /* Continue with in-memory input. */ } }} onSubmit={() => void generateFromDescription()} busy={busy} error={aiError} />}
       {busy && <div className={styles.generatingOverlay} role="status" aria-live="polite">
         <span className={styles.dotWave} aria-hidden="true" />
         <div className={styles.generatingCard}><strong>{tr("正在生成角色", "Generating your character")}</strong></div>
         <span className={styles.generatingStatus} aria-hidden="true">{tr("生成中", "Generating")}</span>
       </div>}
       </div>
-      <div className={styles.stageFoot}><div><strong>{result || !source ? tr("角色预览", "Character preview") : tr("全身角色示例", "Full-body example")}</strong><p>{result ? result.signature === signature ? tr("本次生成结果", "Current result") : tr("配置已更改，当前展示上次生成结果", "Settings changed; showing previous result") : source ? tr("示例图仅供展示，生成后显示你的角色", "Example only; your result appears after generation") : tr("生成后将在这里显示角色图片", "Your generated character will appear here")}</p></div>{result && <a href={result.src} download="character-preview.png"><Download size={15} />{tr("下载", "Download")}</a>}</div>
+      <div className={styles.stageFoot}><div><strong>{result || !source ? tr("角色预览", "Character preview") : tr("全身角色示例", "Full-body example")}</strong><p>{result ? previewMatches(result.signature, signature) ? tr("本次生成结果", "Current result") : tr("配置已更改，当前展示上次生成结果", "Settings changed; showing previous result") : source ? tr("示例图仅供展示，生成后显示你的角色", "Example only; your result appears after generation") : tr("生成后将在这里显示角色图片", "Your generated character will appear here")}</p></div>{result && <a href={result.src} download="character-preview.png"><Download size={15} />{tr("下载", "Download")}</a>}</div>
     </div>
     <div className={styles.panel}>
       {(activeCategory === "face" || activeCategory === "body") && <div className={styles.sectionSwitch} aria-label={tr("选择配置分类", "Choose configuration group")}>{(activeCategory === "face" ? [{ id: "face" as const, zh: "脸部五官", en: "Facial features" }, { id: "hair" as const, zh: "发型", en: "Hair" }] : [{ id: "body" as const, zh: "身材体态", en: "Body and posture" }, { id: "skin" as const, zh: "肤色皮肤", en: "Skin" }]).map((item) => <button key={item.id} type="button" aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>{tr(item.zh, item.en)}</button>)}</div>}

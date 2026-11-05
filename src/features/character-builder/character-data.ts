@@ -27,7 +27,7 @@ const BASE_GROUPS: readonly CharacterGroup[] = [
     select('gender', '性别', 'Gender', ['女性', '男性', '中性', '自定义'], '女性'),
     select('country', '国家／地区', 'Country or region', ['中国', '日本', '韩国', '美国', '英国', '法国', '意大利', '架空世界'], '中国'),
     select('regionalStyle', '地域风格', 'Regional setting', ['现代都市', '东方古代', '欧式古典', '未来都市', '架空世界'], '现代都市'),
-    select('ethnicity', '外貌族群风格', 'Appearance and heritage', ['东亚', '东南亚', '南亚', '欧洲', '非洲', '拉丁美洲', '中东', '混合背景']), select('occupation', '职业／身份', 'Occupation or role', ['学生', '医生', '教师', '记者', '设计师', '律师', '警察', '研究员', '创业者', '演员', '厨师', '探险家', '王族', '骑士', '侦探', '旅行者']), area('description', '补充描述', 'Additional description'),
+    select('ethnicity', '外貌族群风格', 'Appearance and heritage', ['东亚', '东南亚', '南亚', '欧洲', '非洲', '拉丁美洲', '中东', '混合背景']), select('occupation', '职业／身份', 'Occupation or role', ['学生', '医生', '教师', '记者', '设计师', '律师', '警察', '研究员', '创业者', '演员', '厨师', '探险家', '王族', '骑士', '侦探', '旅行者']), area('description', '补充描述', 'Additional description'), area('aiDetails', 'AI 补充细节', 'AI additional details'),
   ] },
   { id: 'role', label: '角色定位', enLabel: 'Character direction', fields: [
     select('genre', '剧种', 'Genre', ['都市', '古装', '悬疑', '奇幻', '科幻', '喜剧', '校园', '年代'], '都市'),
