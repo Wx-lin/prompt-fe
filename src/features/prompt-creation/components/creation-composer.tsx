@@ -11,6 +11,7 @@ import styles from "./creation.module.css";
 type Props = {
   message: string; previewUrl: string | null; disabled?: boolean; followup?: boolean; phase?: "idle" | "uploading" | "creating";
   onMessage: (message: string) => void; onSelectFile: (file: File) => void; onClearAttachment: () => void;
+  onSelectPromptImage?: (file: File) => void;
   onSend: () => void; onHistory?: () => void; requiresMessage?: boolean;
   referenceLoading?: boolean; referenceError?: boolean;
 };
@@ -23,7 +24,7 @@ function subscribeInputMode(listener: () => void) {
   return () => media?.removeEventListener("change", listener);
 }
 
-export function CreationComposer({ message, previewUrl, disabled = false, followup = false, phase = "idle", onMessage, onSelectFile, onClearAttachment, onSend, onHistory, requiresMessage = false, referenceLoading = false, referenceError = false }: Props) {
+export function CreationComposer({ message, previewUrl, disabled = false, followup = false, phase = "idle", onMessage, onSelectFile, onSelectPromptImage, onClearAttachment, onSend, onHistory, requiresMessage = false, referenceLoading = false, referenceError = false }: Props) {
   const t = useTranslations("promptCreation");
   const input = useRef<HTMLInputElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
@@ -36,10 +37,12 @@ export function CreationComposer({ message, previewUrl, disabled = false, follow
   const count = Array.from(message).length;
   const canSend = !disabled && !referenceLoading && count <= 500 && (message.trim().length > 0 || (Boolean(previewUrl) && !requiresMessage));
   useTextareaSize(textarea, message);
-  function select(files: File[]) {
+  function select(files: File[], promptEntry = false) {
     if (disabled || !files.length) return;
     if (files.length !== 1 || !validImage(files[0])) { setInvalid(true); return; }
-    setInvalid(false); onSelectFile(files[0]);
+    setInvalid(false);
+    if (promptEntry && onSelectPromptImage) onSelectPromptImage(files[0]);
+    else onSelectFile(files[0]);
   }
 
   return <div className={styles.composerWrap}>
@@ -66,7 +69,7 @@ export function CreationComposer({ message, previewUrl, disabled = false, follow
         }} />
       <div className={styles.composerTools}>
         <input ref={input} className={styles.fileInput} type="file" accept="image/jpeg,image/png,image/webp" aria-label={t("fileLabel")} tabIndex={-1} disabled={disabled}
-          onChange={event => { select(Array.from(event.target.files ?? [])); event.target.value = ""; }} />
+          onChange={event => { select(Array.from(event.target.files ?? []), true); event.target.value = ""; }} />
         <Button className={styles.upload} type="button" onClick={() => input.current?.click()} disabled={disabled}><ImagePlus size={18} /><span>{t(followup ? "upload" : "imageToPrompt")}</span></Button>
         <span className={styles.composerSpacer} />
         {count > 0 && <span className={styles.count}>{count}/500</span>}

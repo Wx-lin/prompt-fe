@@ -53,6 +53,15 @@ function mount(identity: string | null = "owner") {
   const result = render(view(identity));
   return { user: userEvent.setup(), changeIdentity: (next: string | null) => result.rerender(view(next)), unmount: result.unmount };
 }
+function stubPhotoUpload() {
+  vi.stubGlobal("URL", class extends URL {
+    static createObjectURL = vi.fn(() => "blob:homepage-reference");
+    static revokeObjectURL = vi.fn();
+  });
+  const asset = { id: ASSET, width: 800, height: 600, byte_size: 1234, preview_url: "https://images.example.com/private", thumbnail_url: "https://images.example.com/thumb", preview_expires_at: DATE };
+  vi.spyOn(promptConversationClient, "upload").mockResolvedValue(asset);
+  return new File(["image"], "reference.png", { type: "image/png" });
+}
 async function openSaved(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: "历史" }));
   await user.click(await screen.findByRole("button", { name: "雨夜小猫壁纸" }));
@@ -72,6 +81,146 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); refresh.mockReset(); });
 
 describe("real same-page creative workspace", () => {
+  it.each(["", "重点描述构图"])("图片转提示词入口选图后以 generate 模式发送（文本：%s）", async message => {
+    const file = stubPhotoUpload();
+    const { user } = mount();
+    await user.click(screen.getByRole("button", { name: "图片转提示词" }));
+    await user.upload(screen.getByLabelText("选择创作参考图片"), file);
+    if (message) fireEvent.change(screen.getByRole("textbox"), { target: { value: message } });
+    expect(promptConversationClient.create).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith(
+      { ...(message ? { message } : {}), mode: "generate", asset_id: ASSET }, expect.any(String), expect.any(AbortSignal),
+    ));
+    expect(promptConversationClient.upload).toHaveBeenCalledWith(file, expect.any(AbortSignal));
+  });
+
+  it.each(["drop", "paste"])("首页普通 %s 附图仍以 smart 模式发送", async method => {
+    const file = stubPhotoUpload();
+    const { user } = mount();
+    const textbox = screen.getByRole("textbox");
+    if (method === "drop") fireEvent.drop(textbox.closest("form")!, { dataTransfer: { files: [file] } });
+    else fireEvent.paste(textbox, { clipboardData: { files: [file] } });
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith(
+      { mode: "smart", asset_id: ASSET }, expect.any(String), expect.any(AbortSignal),
+    ));
+  });
+
+  it("对话内上传图片不改变 smart 模式", async () => {
+    const file = stubPhotoUpload();
+    const { user } = mount();
+    await openSaved(user);
+    await user.click(screen.getByRole("button", { name: "上传图片" }));
+    await user.upload(screen.getByLabelText("选择创作参考图片"), file);
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "把背景换成蓝色" } });
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await waitFor(() => expect(promptConversationClient.send).toHaveBeenCalledWith(ID,
+      { message: "把背景换成蓝色", mode: "smart", asset_id: ASSET, parent_analysis_id: TURN, parent_revision: 0 },
+      expect.any(String), expect.any(AbortSignal),
+    ));
+  });
+
+  it("取消入口选图后文本发送保持 smart", async () => {
+    stubPhotoUpload();
+    const { user } = mount();
+    await user.click(screen.getByRole("button", { name: "图片转提示词" }));
+    fireEvent.change(screen.getByLabelText("选择创作参考图片"), { target: { files: null } });
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "你好" } });
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith(
+      { message: "你好", mode: "smart" }, expect.any(String), expect.any(AbortSignal),
+    ));
+  });
+
+  it("原有普通图片后取消入口选图不改变原图片的 smart 意图", async () => {
+    const file = stubPhotoUpload();
+    const { user } = mount();
+    const textbox = screen.getByRole("textbox");
+    fireEvent.drop(textbox.closest("form")!, { dataTransfer: { files: [file] } });
+    await user.click(screen.getByRole("button", { name: "图片转提示词" }));
+    fireEvent.change(screen.getByLabelText("选择创作参考图片"), { target: { files: null } });
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith(
+      { mode: "smart", asset_id: ASSET }, expect.any(String), expect.any(AbortSignal),
+    ));
+    expect(promptConversationClient.upload).toHaveBeenCalledWith(file, expect.any(AbortSignal));
+  });
+
+  it("用普通拖放更换入口图片后不沿用原 generate 意图", async () => {
+    const first = stubPhotoUpload();
+    const second = new File(["other"], "replacement.webp", { type: "image/webp" });
+    const { user } = mount();
+    await user.click(screen.getByRole("button", { name: "图片转提示词" }));
+    await user.upload(screen.getByLabelText("选择创作参考图片"), first);
+    fireEvent.drop(screen.getByRole("textbox").closest("form")!, { dataTransfer: { files: [second] } });
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith(
+      { mode: "smart", asset_id: ASSET }, expect.any(String), expect.any(AbortSignal),
+    ));
+    expect(promptConversationClient.upload).toHaveBeenCalledWith(second, expect.any(AbortSignal));
+  });
+
+  it("移除入口图片后文本发送保持 smart", async () => {
+    const file = stubPhotoUpload();
+    const { user } = mount();
+    await user.click(screen.getByRole("button", { name: "图片转提示词" }));
+    await user.upload(screen.getByLabelText("选择创作参考图片"), file);
+    await user.click(screen.getByRole("button", { name: "移除参考图片" }));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "你好" } });
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith(
+      { message: "你好", mode: "smart" }, expect.any(String), expect.any(AbortSignal),
+    ));
+  });
+
+  it("登录后恢复图片转提示词的 generate 意图", async () => {
+    const file = stubPhotoUpload();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ id: "owner" })));
+    const { user } = mount(null);
+    await user.click(screen.getByRole("button", { name: "图片转提示词" }));
+    await user.upload(screen.getByLabelText("选择创作参考图片"), file);
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    expect(screen.getByRole("dialog", { name: "登录" })).toBeVisible();
+    expect(promptConversationClient.create).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "完成登录" }));
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith(
+      { mode: "generate", asset_id: ASSET }, expect.any(String), expect.any(AbortSignal),
+    ));
+  });
+
+  it("取消登录后再次发送仍保留图片转提示词意图", async () => {
+    const file = stubPhotoUpload();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ id: "owner" })));
+    const { user } = mount(null);
+    await user.click(screen.getByRole("button", { name: "图片转提示词" }));
+    await user.upload(screen.getByLabelText("选择创作参考图片"), file);
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await user.click(screen.getByRole("button", { name: "关闭登录" }));
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await user.click(screen.getByRole("button", { name: "完成登录" }));
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith(
+      { mode: "generate", asset_id: ASSET }, expect.any(String), expect.any(AbortSignal),
+    ));
+  });
+
+  it("图片转提示词网络不确定时重试保留模式、图片与幂等键", async () => {
+    const file = stubPhotoUpload();
+    vi.mocked(promptConversationClient.create).mockRejectedValueOnce(new ApiError(0, "NETWORK_ERROR"));
+    const { user } = mount();
+    await user.click(screen.getByRole("button", { name: "图片转提示词" }));
+    await user.upload(screen.getByLabelText("选择创作参考图片"), file);
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await screen.findByRole("alert");
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledTimes(2));
+    const [first, second] = vi.mocked(promptConversationClient.create).mock.calls;
+    expect(first[0]).toEqual({ mode: "generate", asset_id: ASSET });
+    expect(second[0]).toEqual(first[0]);
+    expect(second[1]).toBe(first[1]);
+    expect(promptConversationClient.upload).toHaveBeenCalledOnce();
+  });
+
   it.each(["click", "Enter"])("sends a homepage greeting through auto mode with %s", async action => {
     const { user } = mount();
     const textbox = screen.getByRole("textbox");
@@ -82,7 +231,7 @@ describe("real same-page creative workspace", () => {
     expect(vi.mocked(promptConversationClient.create).mock.calls[0][0].mode).toBe("smart");
   });
 
-  it("sends a homepage image-only attachment as asset_id without forcing generation", async () => {
+  it("sends an image selected from the homepage image-to-prompt entry as prompt generation", async () => {
     vi.stubGlobal("URL", class extends URL {
       static createObjectURL = vi.fn(() => "blob:homepage-reference");
       static revokeObjectURL = vi.fn();
@@ -92,13 +241,14 @@ describe("real same-page creative workspace", () => {
     vi.mocked(promptConversationClient.create).mockResolvedValueOnce({ ...queued, input_type: "image", asset_id: ASSET, idea_text: null, user_message: "" });
     const { user } = mount();
     const file = new File(["image"], "reference.png", { type: "image/png" });
+    await user.click(screen.getByRole("button", { name: "图片转提示词" }));
     await user.upload(screen.getByLabelText("选择创作参考图片"), file);
     expect(promptConversationClient.upload).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "发送" }));
-    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith({ asset_id: ASSET, mode: "smart" }, expect.any(String), expect.any(AbortSignal)));
+    await waitFor(() => expect(promptConversationClient.create).toHaveBeenCalledWith({ asset_id: ASSET, mode: "generate" }, expect.any(String), expect.any(AbortSignal)));
     expect(promptConversationClient.upload).toHaveBeenCalledWith(file, expect.any(AbortSignal));
     expect(promptConversationClient.send).not.toHaveBeenCalled();
-    expect(vi.mocked(promptConversationClient.create).mock.calls[0][0].mode).toBe("smart");
+    expect(vi.mocked(promptConversationClient.create).mock.calls[0][0].mode).toBe("generate");
   });
 
   it("continues the collapsed successful conversation from its latest turn through homepage auto send", async () => {

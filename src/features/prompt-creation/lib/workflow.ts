@@ -34,6 +34,7 @@ export function createConversationWorkflow(options: Options = {}) {
   let enabled = true;
   let destroyed = false;
   let preview: string | null = null;
+  let fileIntent: "generate" | null = null;
   let referenceRequest: AbortController | null = null;
   let pendingSend: PendingSend | null = null;
   let retryKey: { id: string; key: string } | null = null;
@@ -62,7 +63,7 @@ export function createConversationWorkflow(options: Options = {}) {
     publish({ historyLoading: false });
   }
   function reset() {
-    invalidate(); releasePreview(); pendingSend = null; retryKey = null; loginIntent = null; cursor = null; deletedIds = new Set();
+    invalidate(); releasePreview(); fileIntent = null; pendingSend = null; retryKey = null; loginIntent = null; cursor = null; deletedIds = new Set();
     publish(initial());
   }
   function setIdentity(next: string | null) {
@@ -70,12 +71,13 @@ export function createConversationWorkflow(options: Options = {}) {
     const preserve = identity === null && !hadIdentity && next !== null && !state.conversation && !state.asset;
     const draft = preserve ? { message: state.message, file: state.file, source: state.source, previewUrl: state.previewUrl, expanded: state.expanded } : null;
     const savedPreview = preserve ? preview : null;
+    const savedFileIntent = preserve ? fileIntent : null;
     // History is a navigation intent, safe to resume for a different account; private sends are not.
     const intent = preserve || loginIntent?.kind === "history" ? loginIntent : null;
     if (preserve) preview = null;
     reset(); identity = next; hadIdentity = hadIdentity || next !== null;
     loginIntent = intent;
-    if (draft) { preview = savedPreview; publish(draft); }
+    if (draft) { preview = savedPreview; fileIntent = savedFileIntent; publish(draft); }
     else if (intent?.kind === "history") publish({ expanded: true, view: "history" });
   }
   function report(error: unknown, field: "error" | "historyError" | "saveError" = "error") {
@@ -133,18 +135,18 @@ export function createConversationWorkflow(options: Options = {}) {
   }
   function selectGeneratedImage(image: GeneratedImage) {
     if (destroyed || busy() || !state.conversation?.turns.some(turn => turn.generated_image?.id === image.id)) return;
-    cancelReferenceRequest(); releasePreview();
+    cancelReferenceRequest(); releasePreview(); fileIntent = null;
     changeDraft({ generatedImage: image, file: null, source: null, previewUrl: null, asset: null, referenceLoading: false, referenceError: false });
   }
-  function selectFile(file: File) {
+  function selectFile(file: File, intent: "generate" | null = null) {
     if (destroyed || busy()) return false;
     if (!validImage(file)) { publish({ error: new ApiError(0, "INVALID_IMAGE") }); return false; }
-    cancelReferenceRequest(); releasePreview(); preview = URL.createObjectURL(file);
+    cancelReferenceRequest(); releasePreview(); preview = URL.createObjectURL(file); fileIntent = intent;
     return changeDraft({ file, previewUrl: preview, source: null, asset: null, generatedImage: null, referenceLoading: false, referenceError: false });
   }
   function selectReference(source: CreationReference) {
     if (destroyed || busy()) return false;
-    invalidate(); releasePreview();
+    invalidate(); releasePreview(); fileIntent = null;
     const promptText = source.promptText?.trim() ? source.promptText : null;
     const changed = changeDraft({ expanded: false, view: "chat", source, previewUrl: source.imageUrl, file: null, asset: null, generatedImage: null, conversation: null, message: promptText ?? "", referenceLoading: !promptText, referenceError: false });
     if (!changed || promptText) return changed;
@@ -170,10 +172,11 @@ export function createConversationWorkflow(options: Options = {}) {
   }
   function clearAttachment() {
     if (destroyed || busy()) return;
-    cancelReferenceRequest(); releasePreview(); changeDraft({ file: null, source: null, previewUrl: null, asset: null, generatedImage: null, referenceLoading: false, referenceError: false });
+    cancelReferenceRequest(); releasePreview(); fileIntent = null; changeDraft({ file: null, source: null, previewUrl: null, asset: null, generatedImage: null, referenceLoading: false, referenceError: false });
   }
   async function send(mode: ConversationMode = "auto") {
     if (!enabled || destroyed || busy() || state.referenceLoading || active(latest())) return;
+    if (state.file && fileIntent) mode = fileIntent;
     const message = state.message.trim();
     if ((mode !== "auto" && mode !== "generate" && mode !== "image" && mode !== "smart") || (!message && !state.file && !state.source && !state.asset) || Array.from(message).length > 500) {
       publish({ error: new ApiError(0, "INVALID_REQUEST") }); return;
@@ -203,7 +206,7 @@ export function createConversationWorkflow(options: Options = {}) {
         ? await client.send(pending.conversationId, { ...pending.input, parent_analysis_id: pending.parentId!, parent_revision: pending.parentRevision! }, pending.key, request.controller.signal)
         : await client.create(pending.input, pending.key, request.controller.signal);
       if (!current(request)) return;
-      releasePreview(); pendingSend = null; loginIntent = null;
+      releasePreview(); fileIntent = null; pendingSend = null; loginIntent = null;
       publish({ phase: "idle", message: "", file: null, source: null, previewUrl: null, asset: null, generatedImage: null });
       applyTurn(value);
     } catch (error) { if (current(request) && !isAbortError(error)) report(error); }
@@ -216,7 +219,7 @@ export function createConversationWorkflow(options: Options = {}) {
   }
   async function openConversation(id: string) {
     if (!enabled || destroyed || busy()) return;
-    invalidate(); releasePreview(); pendingSend = null; retryKey = null;
+    invalidate(); releasePreview(); fileIntent = null; pendingSend = null; retryKey = null;
     publish({ expanded: true, view: "chat", opening: true, conversation: null, edit: null, message: "", file: null, source: null, previewUrl: null, asset: null, error: null, saveError: null });
     const request = ticket(); reading = true;
     try { const value = await client.detail(id, request.controller.signal); if (current(request)) { apply(value); publish({ generatedImage: null }); } }

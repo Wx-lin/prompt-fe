@@ -86,7 +86,7 @@ export function CreationHomeComposer() {
   const busy = state.phase !== "idle" || state.opening || Boolean(latest && latest.status !== "succeeded");
   return <section ref={home} className={styles.home} onFocusCapture={(event) => { if ((state.edit || busy) && state.conversation && event.target instanceof HTMLTextAreaElement) workflow.setExpanded(true); }}>
     <CreationComposer message={state.message} previewUrl={state.previewUrl} disabled={busy && !state.conversation} phase={state.phase} referenceLoading={state.referenceLoading} referenceError={state.referenceError} onMessage={workflow.setMessage}
-      onSelectFile={workflow.selectFile} onClearAttachment={workflow.clearAttachment} onSend={() => { void workflow.send("smart"); }}
+      onSelectFile={workflow.selectFile} onSelectPromptImage={file => workflow.selectFile(file, "generate")} onClearAttachment={workflow.clearAttachment} onSend={() => { void workflow.send("smart"); }}
       onHistory={() => guard(() => { void workflow.showHistory(); })} />
   </section>;
 }
