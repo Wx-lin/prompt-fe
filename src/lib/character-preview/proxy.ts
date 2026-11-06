@@ -2,7 +2,8 @@ import "server-only";
 import { authorize, boundedBody } from "@/lib/submissions/proxy";
 
 const PRIVATE = { "Cache-Control": "private, no-store" };
-const MAX_REQUEST = 128 * 1024;
+const MAX_REFERENCE_BASE64 = Math.ceil((5 * 1024 * 1024) / 3) * 4;
+const MAX_REQUEST = MAX_REFERENCE_BASE64 + 128 * 1024;
 const MAX_RESPONSE = 20 * 1024 * 1024;
 const RATIOS = new Set(["1:1", "3:4", "4:3", "9:16", "16:9", "21:9"]);
 const MESSAGES: Record<number, [string, string]> = {
@@ -35,13 +36,13 @@ export async function createCharacterPreview(request: Request): Promise<Response
   let body: Record<string, unknown> | null;
   try { body = record(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes))); }
   catch { return failure(422); }
-  if (!body || Object.keys(body).some((key) => !["prompt", "aspect_ratio"].includes(key)) || typeof body.prompt !== "string" || !body.prompt.trim() || Array.from(body.prompt).length > 12000 || (body.aspect_ratio !== undefined && (typeof body.aspect_ratio !== "string" || !RATIOS.has(body.aspect_ratio)))) return failure(422);
+  if (!body || Object.keys(body).some((key) => !["prompt", "aspect_ratio", "reference_image_base64"].includes(key)) || typeof body.prompt !== "string" || !body.prompt.trim() || Array.from(body.prompt).length > 12000 || (body.aspect_ratio !== undefined && (typeof body.aspect_ratio !== "string" || !RATIOS.has(body.aspect_ratio))) || (body.reference_image_base64 !== undefined && (typeof body.reference_image_base64 !== "string" || !body.reference_image_base64 || body.reference_image_base64.length > MAX_REFERENCE_BASE64 || body.reference_image_base64.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(body.reference_image_base64)))) return failure(422);
 
   const base = (process.env.CHARACTER_PREVIEW_API_BASE_URL?.trim() || process.env.PROMPT_CREATION_API_BASE_URL?.trim() || (process.env.API_BASE_URL ?? "http://localhost:8000")).replace(/\/$/, "");
   try {
     const upstream = await fetch(`${base}/api/character-preview`, {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ prompt: body.prompt, ...(body.aspect_ratio === undefined ? {} : { aspect_ratio: body.aspect_ratio }) }), cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(180000),
+      body: JSON.stringify({ prompt: body.prompt, ...(body.aspect_ratio === undefined ? {} : { aspect_ratio: body.aspect_ratio }), ...(body.reference_image_base64 === undefined ? {} : { reference_image_base64: body.reference_image_base64 }) }), cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(180000),
     });
     if (!upstream.ok) {
       await upstream.body?.cancel().catch(() => undefined);

@@ -5,6 +5,7 @@ import { createInitialValues } from "./character-data";
 import { DRAFT_KEY } from "./character-presets";
 import { characterDraftKey, markCharacterFreshStart, markCharacterLoginResume } from "./character-draft-scope";
 import { readDraftImage, storeDraftImage } from "./character-draft-images";
+import { getOfficialCharacter } from "@/features/character-library/official-characters";
 
 vi.mock("@/features/gallery/components/site-header", () => ({ SiteHeader: () => null }));
 vi.mock("@/i18n/navigation", () => ({ Link: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a> }));
@@ -13,7 +14,7 @@ vi.mock("./character-draft-images", () => ({ storeDraftImage: vi.fn().mockResolv
 
 const user = { id: "u1", email: null, nickname: null, avatar_url: null, created_at: "2026-01-01" };
 beforeEach(() => { sessionStorage.clear(); localStorage.clear(); vi.mocked(readDraftImage).mockResolvedValue(null); vi.mocked(storeDraftImage).mockClear(); history.replaceState(null, "", "/character-setting"); });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); history.replaceState(null, "", "/"); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); history.replaceState(null, "", "/"); });
 
 describe("角色资产编辑", () => {
   it("旧角色图片签名缺少新增的 AI 补充字段时仍是当前预览", async () => {
@@ -88,6 +89,53 @@ describe("角色资产编辑", () => {
     sessionStorage.setItem(characterDraftKey("?preset=urban-man"), JSON.stringify({ version: 1, preset: draft }));
     render(<CharacterBuilder />);
     await waitFor(() => expect(screen.getByLabelText("角色姓名")).toHaveValue("未保存的青年"));
+  });
+  it.each(["urban-man", "urban-woman"])("未生成时保存官方角色 %s 的原图和原始配置，供重新打开后继续调整", async (id) => {
+    history.replaceState(null, "", `/character-setting?preset=${id}`);
+    const official = getOfficialCharacter(id)!;
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { id: "a1" } }), { status: 200 }));
+    vi.stubGlobal("fetch", fetcher);
+    let loadedUrl = "";
+    class FakeImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      naturalWidth = 800;
+      naturalHeight = 1200;
+      set src(value: string) { loadedUrl = value; queueMicrotask(() => this.onload?.()); }
+    }
+    vi.stubGlobal("Image", FakeImage);
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({ drawImage: vi.fn() } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockReturnValue("data:image/png;base64,cG5n");
+    render(<CharacterBuilder user={user} />);
+    fireEvent.change(screen.getByLabelText("角色姓名"), { target: { value: "修改过的名字" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存到我的角色库" }));
+    await waitFor(() => expect(fetcher).toHaveBeenCalled());
+    const data = JSON.parse(fetcher.mock.calls[0][1].body);
+    expect(loadedUrl).toContain("/_next/image?");
+    expect(data.preview_image_base64).toBe("cG5n");
+    expect(JSON.parse(data.preview_signature)[0]).toEqual(official.values);
+    expect(data.values.name).toBe("修改过的名字");
+    await screen.findByText("已保存到我的角色库。");
+    cleanup();
+    history.replaceState(null, "", "/character-setting?asset=a1");
+    fetcher.mockResolvedValue(new Response(JSON.stringify({ data: { ...data, id: "a1" } }), { status: 200 }));
+    render(<CharacterBuilder user={user} />);
+    expect(await screen.findByAltText("AI 生成的角色预览")).toHaveAttribute("src", "data:image/png;base64,cG5n");
+    expect(screen.getByLabelText("角色姓名")).toHaveValue("修改过的名字");
+  });
+  it("官方原图读取失败时不会保存没有参考图的角色", async () => {
+    history.replaceState(null, "", "/character-setting?preset=urban-man");
+    const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
+    class FailedImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_value: string) { queueMicrotask(() => this.onerror?.()); }
+    }
+    vi.stubGlobal("Image", FailedImage);
+    render(<CharacterBuilder user={user} />);
+    fireEvent.click(screen.getByRole("button", { name: "保存到我的角色库" }));
+    expect(await screen.findByText("无法读取官方角色图，未保存角色，请稍后重试。")).toBeVisible();
+    expect(fetcher).not.toHaveBeenCalled();
   });
   it("生成后保存角色设定、模型和图片及其生成时签名", async () => {
     const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ data: { image_base64: "dGVzdA==", mime_type: "image/png" } }), { status: 200 })).mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: "a1" } }), { status: 200 }));

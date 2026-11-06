@@ -21,12 +21,23 @@ describe("character preview proxy", () => {
     expect(upstream.mock.calls[0][1]).toMatchObject({ method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer private-session" }, body: JSON.stringify({ prompt: "角色描述" }) });
   });
   it("forwards only an allowed picture aspect ratio", async () => {
-    const upstream = vi.fn().mockResolvedValue(Response.json({ success: true, data: { image_base64: "aGVsbG8=", mime_type: "image/png" }, error: null }));
+    const upstream = vi.fn().mockImplementation(async () => Response.json({ success: true, data: { image_base64: "aGVsbG8=", mime_type: "image/png" }, error: null }));
     vi.stubGlobal("fetch", upstream);
     expect((await POST(request({ prompt: "角色", aspect_ratio: "16:9" }))).status).toBe(200);
     expect(JSON.parse(upstream.mock.calls[0][1].body)).toEqual({ prompt: "角色", aspect_ratio: "16:9" });
     expect((await POST(request({ prompt: "角色", aspect_ratio: "5000:1" }))).status).toBe(422);
     expect(upstream).toHaveBeenCalledOnce();
+  });
+  it("forwards an optional reference image and rejects malformed or oversized images", async () => {
+    const upstream = vi.fn().mockImplementation(async () => Response.json({ success: true, data: { image_base64: "aGVsbG8=", mime_type: "image/png" }, error: null }));
+    vi.stubGlobal("fetch", upstream);
+    const reference = "iVBORw0KGgo=";
+    expect((await POST(request({ prompt: "换发型", reference_image_base64: reference }))).status).toBe(200);
+    expect(JSON.parse(upstream.mock.calls[0][1].body)).toEqual({ prompt: "换发型", reference_image_base64: reference });
+    expect((await POST(request({ prompt: "角色", reference_image_base64: "A".repeat(6 * 1024 * 1024) }))).status).toBe(200);
+    expect((await POST(request({ prompt: "角色", reference_image_base64: "not base64!" }))).status).toBe(422);
+    expect((await POST(request({ prompt: "角色", reference_image_base64: "A".repeat(7 * 1024 * 1024 + 4) }))).status).toBe(413);
+    expect(upstream).toHaveBeenCalledTimes(2);
   });
   it("routes character previews to the dedicated configured service", async () => {
     vi.stubEnv("CHARACTER_PREVIEW_API_BASE_URL", "http://127.0.0.1:8051");

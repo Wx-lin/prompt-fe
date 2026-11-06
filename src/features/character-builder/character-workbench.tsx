@@ -10,6 +10,7 @@ import { GROUPS, UNSPECIFIED, type CharacterValues } from "./character-data";
 import { CharacterVisualControls } from "./character-visual-controls";
 import { CharacterFieldControl } from "./character-fields";
 import { CharacterAiComposer } from "./character-ai-composer";
+import { imageBaseline, initialReferenceExpression, referenceEditPrompt, referenceImageBase64 } from "./character-reference";
 import { markCharacterLoginResume } from "./character-draft-scope";
 import { findOutfit, OUTFITS, OUTFIT_FILTERS, OUTFIT_FILTER_ENGLISH, type OutfitFilter } from "./character-outfits";
 import styles from "./character-workbench.module.css";
@@ -25,7 +26,7 @@ const categories = [
 const promptGroups = new Set(["basic", "role", "face", "hair", "body", "skin", "makeup", "expression"]);
 
 export type CharacterPreviewResult = { src: string; signature: string };
-type Props = { values: CharacterValues; en: boolean; onChange: (id: string, value: string) => void; onApplyOutfit: (changes: Readonly<Record<string, string>>) => void; onApplyAi?: (input: unknown, clearDefaults: boolean) => CharacterValues; newCharacter?: boolean; canUndo: boolean; authenticated?: boolean; initialPreview?: CharacterPreviewResult | null; exampleImage?: string | null; onPreviewChange?: (result: CharacterPreviewResult) => void; onCopyPrompt?: () => void; copyResult?: boolean | null; onAdvanced?: () => void; onBeforeLogin?: () => Promise<boolean>; initialCategory?: Category };
+type Props = { values: CharacterValues; en: boolean; onChange: (id: string, value: string) => void; onApplyOutfit: (changes: Readonly<Record<string, string>>) => void; onApplyAi?: (input: unknown, clearDefaults: boolean) => CharacterValues; newCharacter?: boolean; canUndo: boolean; authenticated?: boolean; initialPreview?: CharacterPreviewResult | null; exampleImage?: string | null; exampleValues?: CharacterValues | null; onPreviewChange?: (result: CharacterPreviewResult) => void; onCopyPrompt?: () => void; copyResult?: boolean | null; onAdvanced?: () => void; onBeforeLogin?: () => Promise<boolean>; initialCategory?: Category };
 function previewMatches(saved: string, current: string): boolean {
   if (saved === current) return true;
   try {
@@ -44,7 +45,7 @@ function buildImagePrompt(values: CharacterValues, outfit: string, extra: string
   return ["生成单张写实人物全身肖像，头顶到鞋子完整入画，摄影棚背景，柔和立体光线。不要拼图、文字或水印。", ...details, previewExpression ? `预览表情：${previewExpression}` : "", outfit ? `服装：${outfit}。` : "", ...["clothingStyle", "clothingColor", "material", "fit", "exposure"].map((key) => values[key] && values[key] !== UNSPECIFIED ? `${key === "clothingStyle" ? "服装风格" : key === "clothingColor" ? "服装颜色" : key === "material" ? "材质" : key === "fit" ? "版型" : "露肤范围"}：${values[key]}` : ""), extra && extra !== UNSPECIFIED ? `造型补充：${extra}` : ""].filter(Boolean).join("\n");
 }
 
-export function CharacterWorkbench({ values, en, onChange, onApplyOutfit, onApplyAi, newCharacter = false, canUndo, authenticated = true, initialPreview = null, exampleImage, onPreviewChange, onCopyPrompt, copyResult = null, onAdvanced, onBeforeLogin, initialCategory = "clothing" }: Props) {
+export function CharacterWorkbench({ values, en, onChange, onApplyOutfit, onApplyAi, newCharacter = false, canUndo, authenticated = true, initialPreview = null, exampleImage, exampleValues, onPreviewChange, onCopyPrompt, copyResult = null, onAdvanced, onBeforeLogin, initialCategory = "clothing" }: Props) {
   const tr = (zh: string, english: string) => en ? english : zh;
   const [category, setCategory] = useState<Category>(initialCategory);
   const activeCategory = category === "hair" ? "face" : category === "skin" ? "body" : category === "makeup" ? "clothing" : category;
@@ -82,11 +83,21 @@ export function CharacterWorkbench({ values, en, onChange, onApplyOutfit, onAppl
     } } catch { /* The input remains available without tab storage. */ }
   }, []);
 
-  async function requestImage(controller: AbortController, imageValues: CharacterValues, imageExpression: string) {
+  async function requestImage(controller: AbortController, imageValues: CharacterValues, imageExpression: string, instruction = "") {
     const chosenOutfit = findOutfit(imageValues);
     const notes = imageValues.outfitNotes ?? "";
     const clothing = chosenOutfit?.description ?? [imageValues.clothingCategory, imageValues.top, imageValues.bottom, imageValues.shoes].filter((value) => value && value !== UNSPECIFIED).join("，");
-    const response = await fetch("/api/character-preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: buildImagePrompt(imageValues, clothing, notes, imageExpression), aspect_ratio: "3:4" }), signal: controller.signal });
+    const reference = result?.src ?? (!newCharacter && exampleImage ? exampleImage : null);
+    let referenceImage: string | undefined;
+    let prompt = buildImagePrompt(imageValues, clothing, notes, imageExpression);
+    if (reference) {
+      const baseline = result ? imageBaseline(result.signature) : exampleValues ? { values: exampleValues, expression: initialReferenceExpression(exampleValues) } : null;
+      if (!baseline) throw new Error(tr("无法读取参考图对应的角色配置，请重新打开角色后重试。", "Could not read the reference image settings. Reopen the character and try again."));
+      try { referenceImage = await referenceImageBase64(reference, controller.signal); }
+      catch { throw new Error(tr("参考图读取失败，请检查图片或网络后重试。", "Could not load the reference image. Check the image or connection and try again.")); }
+      prompt = referenceEditPrompt(imageValues, baseline.values, imageExpression, baseline.expression, instruction);
+    }
+    const response = await fetch("/api/character-preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, aspect_ratio: "3:4", ...(referenceImage ? { reference_image_base64: referenceImage } : {}) }), signal: controller.signal });
     if (response.status === 401) { setLoginOpen(true); return; }
     if (!response.ok) throw new Error(response.status === 429 ? tr("生成次数已达上限，请稍后重试。", "Generation limit reached. Please try again later.") : response.status === 503 ? tr("角色预览服务暂不可用，请检查服务和 API 配置后重试。", "Preview service is unavailable. Check the service and API configuration.") : response.status === 502 ? tr("角色预览服务异常，请检查模型权限或稍后重试。", "Preview service failed. Check model access or try again later.") : tr("暂时无法生成，请稍后重试。", "Unable to generate. Please try again."));
     const body: unknown = await response.json();
@@ -128,11 +139,11 @@ export function CharacterWorkbench({ values, en, onChange, onApplyOutfit, onAppl
       if (baseline !== JSON.stringify(latestValues.current)) throw new Error(tr("配置已变更，请重新生成以保留你的修改。", "Settings changed. Generate again to keep your edits."));
       if (!body || typeof body !== "object" || !("data" in body) || !applyAi.current) throw new Error(tr("角色描述解析结果异常，请重试。", "Invalid interpretation. Please try again."));
       let next: CharacterValues;
-      try { next = applyAi.current(body.data, newCharacter); } catch { throw new Error(tr("角色描述解析结果异常，请重试。", "Invalid interpretation. Please try again.")); }
+      try { next = applyAi.current(body.data, newCharacter && !result); } catch { throw new Error(tr("角色描述解析结果异常，请重试。", "Invalid interpretation. Please try again.")); }
       const choices = (next.expressions ?? "").split(/[，,]/).map((value) => value.trim()).filter((value) => value && value !== UNSPECIFIED && value !== "无");
       const nextExpression = choices.includes(next.baseExpression) ? next.baseExpression : choices[0] ?? "";
       setPreviewExpression(nextExpression);
-      try { await requestImage(controller, next, nextExpression); }
+      try { await requestImage(controller, next, nextExpression, aiDescription.trim()); }
       catch (err) { throw new Error(tr("配置已更新，但图片生成失败；请重试。", "Settings updated, but the image could not be generated. Please retry."), { cause: err }); }
     } catch (err) {
       if (!controller.signal.aborted) setAiError(err instanceof Error && !(err instanceof TypeError) ? err.message : tr("暂时无法生成，请检查网络后重试。", "Unable to generate. Check your connection."));
@@ -163,7 +174,7 @@ export function CharacterWorkbench({ values, en, onChange, onApplyOutfit, onAppl
         <Tabs.Panel value="style"><div className={styles.panelTitle}><h2>{tr("发型与妆容", "Hair and makeup")}</h2></div><div className={styles.visualSections} aria-label={tr("造型类型", "Styling type")}><button type="button" aria-pressed={styleCategory === "hair"} onClick={() => setStyleCategory("hair")}>{tr("发型", "Hair")}</button><button type="button" aria-pressed={styleCategory === "makeup"} onClick={() => setStyleCategory("makeup")}>{tr("妆容配饰", "Makeup and accessories")}</button></div><CharacterVisualControls key={styleCategory} category={styleCategory} values={values} en={en} onChange={onChange} previewExpression={activePreviewExpression} onPreviewExpressionChange={choosePreviewExpression} /></Tabs.Panel>
         <Tabs.Panel value="ai"><div className={styles.panelTitle}><h2>{tr("描述你的造型", "Describe your look")}</h2></div><label className={styles.description}><span>{tr("补充描述", "Additional description")}</span><textarea value={extra} maxLength={1000} onChange={(event) => onChange("outfitNotes", event.target.value)} placeholder={tr("例如：衣服偏宽松，搭配银色耳饰", "For example: a relaxed fit with silver earrings")} /></label><p className={styles.help}>{tr("将描述和所选服装一起用于生成。参考图上传暂未开放。", "Your description is used with the selected outfit. Reference image upload is not available yet.")}</p></Tabs.Panel>
       </Tabs.Root> : <CharacterVisualControls key={category} category={category} values={values} en={en} onChange={onChange} previewExpression={activePreviewExpression} onPreviewExpressionChange={choosePreviewExpression} />}
-      <div className={styles.panelFooter}>{outfit && canUndo && <a className={styles.undoLink} href="#character-change-notice">{tr("查看撤销操作 ↑", "Review undo options ↑")}</a>}{error && <p role="alert" className={styles.error}>{error}</p>}<button type="button" className={styles.generate} disabled={busy} onClick={() => void generate()}>{busy ? tr("生成中，请稍候…", "Generating…") : tr("确认生成", "Generate preview")}</button>{!authenticated && <p>{tr("登录后可生成", "Sign in to generate")}</p>}<p>{tr("选择后预览不会立即变化；确认后将重新生图，人物外貌可能变化。每次生成消耗 API 额度。", "Selection does not change the preview immediately. Generating creates a new image and the character's appearance may change. Each generation uses API credits.")}</p><div className={styles.outputActions}>{onCopyPrompt && <button type="button" aria-label={tr("复制当前角色提示词", "Copy current character prompt")} onClick={onCopyPrompt}>{tr("复制提示词", "Copy prompt")}</button>}{result ? <a href={result.src} download="character-preview.png">{tr("下载图片", "Download image")}</a> : <button type="button" disabled>{tr("下载图片", "Download image")}</button>}</div>{copyResult !== null && <p role={copyResult ? "status" : "alert"}>{copyResult ? tr("已复制当前提示词。", "Prompt copied.") : tr("复制失败，请到提示词预览中手动复制。", "Copy failed. Copy the prompt manually from the preview.")}</p>}</div>
+      <div className={styles.panelFooter}>{outfit && canUndo && <a className={styles.undoLink} href="#character-change-notice">{tr("查看撤销操作 ↑", "Review undo options ↑")}</a>}{error && <p role="alert" className={styles.error}>{error}</p>}<button type="button" className={styles.generate} disabled={busy} onClick={() => void generate()}>{busy ? tr("生成中，请稍候…", "Generating…") : tr("确认生成", "Generate preview")}</button>{!authenticated && <p>{tr("登录后可生成", "Sign in to generate")}</p>}<p>{tr("选择后预览不会立即变化；有角色图时将基于当前图调整，人物外貌可能变化。每次生成消耗 API 额度。", "Selection does not change the preview immediately. Existing character images are used as a reference, and appearance may change. Each generation uses API credits.")}</p><div className={styles.outputActions}>{onCopyPrompt && <button type="button" aria-label={tr("复制当前角色提示词", "Copy current character prompt")} onClick={onCopyPrompt}>{tr("复制提示词", "Copy prompt")}</button>}{result ? <a href={result.src} download="character-preview.png">{tr("下载图片", "Download image")}</a> : <button type="button" disabled>{tr("下载图片", "Download image")}</button>}</div>{copyResult !== null && <p role={copyResult ? "status" : "alert"}>{copyResult ? tr("已复制当前提示词。", "Prompt copied.") : tr("复制失败，请到提示词预览中手动复制。", "Copy failed. Copy the prompt manually from the preview.")}</p>}</div>
     </div>
     <Dialog.Root open={loginOpen} onOpenChange={setLoginOpen}><Dialog.Portal><Dialog.Backdrop className={styles.loginBackdrop} /><Dialog.Popup className={styles.loginDialog}><Dialog.Title>{tr("登录后生成角色预览", "Sign in to generate a preview")}</Dialog.Title><Dialog.Description>{tr("登录后即可生成角色预览并保存到个人角色库。当前设定会保留。", "Sign in to generate and save your character. Your settings will be kept.")}</Dialog.Description><div><Dialog.Close>{tr("稍后再说", "Not now")}</Dialog.Close><a onClick={(event) => { if (!onBeforeLogin) { markCharacterLoginResume(); return; } event.preventDefault(); const href = event.currentTarget.href; void onBeforeLogin().then((ready) => { if (ready) { markCharacterLoginResume(); window.location.assign(href); } else setLoginOpen(false); }); }} href={`${en ? "/en" : ""}/login?returnTo=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/character-setting")}`}>{tr("登录", "Sign in")}</a></div></Dialog.Popup></Dialog.Portal></Dialog.Root>
   </section>;
