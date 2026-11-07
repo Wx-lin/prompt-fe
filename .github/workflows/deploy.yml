@@ -27,7 +27,7 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      - run: node --test deploy/runtime-image.test.mjs deploy/release-rollback.test.mjs
+      - run: node --test deploy/runtime-image.check.mjs deploy/release-rollback.check.mjs
       - name: Verify character assets in COS
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: node deploy/verify-character-assets.mjs "$GITHUB_SHA"

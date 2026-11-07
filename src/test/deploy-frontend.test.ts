@@ -25,7 +25,9 @@ describe('frontend release safeguards', () => {
     expect(script).toContain('flock -w 600 9');
     expect(script).toContain('flock -w 600 8');
     expect(script).not.toContain('flock -n');
-    expect(script.indexOf('sha256sum -c')).toBeLessThan(script.indexOf('docker build'));
+    const helper = readFileSync('deploy/build-runtime-image.sh', 'utf8');
+    expect(script.indexOf('sha256sum -c')).toBeLessThan(script.indexOf('bash "$incoming/build-runtime-image.sh"'));
+    expect(helper).toContain('docker build --pull=false --network=none');
     expect(script).toContain('Concurrent deployment detected');
     expect(script).toContain('rollback-');
     expect(script).not.toMatch(/docker (system prune|compose down)/);
@@ -66,7 +68,7 @@ it('continues exact image rollback and nginx reload when source restore fails', 
 // These cases execute tar and a shell release script; health_failure runs all 30 probes.
 // Full-suite CPU contention can push the successful shell fixture past 15s on macOS.
 // Keep a bounded timeout local; all release/rollback assertions remain unchanged.
-it.each([['success', 0], ['health_failure', 1], ['stale_image', 1], ['post_copy_stale', 1], ['missing_public', 1], ['duplicate_public', 1]] as const)('runs the release state machine: %s', async (mode, status) => {
+it.each([['success', 0], ['health_failure', 1], ['stale_image', 1], ['post_copy_stale', 1], ['missing_public', 1], ['duplicate_public', 1], ['different_filesystem', 1], ['low_disk', 1]] as const)('runs the release state machine: %s', async (mode, status) => {
   const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
@@ -82,6 +84,9 @@ it.each([['success', 0], ['health_failure', 1], ['stale_image', 1], ['post_copy_
   mkdirSync(join(root, 'frontend'));
   writeFileSync(join(root, 'frontend', 'old.txt'), 'old');
   writeFileSync(join(incoming, 'checksums.txt'), 'fixture');
+  writeFileSync(join(incoming, 'check-release-space.sh'), readFileSync('deploy/check-release-space.sh'));
+  writeFileSync(join(incoming, 'runtime-base.env'), `AIGC_RUNTIME_BASE_ID=${old}\n`);
+  writeFileSync(join(incoming, 'build-runtime-image.sh'), '#!/bin/sh\nprintf \"docker build\\n\" >> \"$LOG\"\n');
   const runtime = join(root, 'runtime-fixture');
   const source = join(root, 'source-fixture');
   mkdirSync(join(runtime, 'app'), { recursive: true });
@@ -100,12 +105,16 @@ it.each([['success', 0], ['health_failure', 1], ['stale_image', 1], ['post_copy_
   const stub = (name: string, body: string) => writeFileSync(join(bin, name), `#!/usr/bin/env bash\n${body}\n`, { mode: 0o700 });
   stub('flock', 'exit 0');
   stub('sha256sum', 'exit 0');
-  stub('df', 'printf "Avail\\n99999999999\\n"');
+  stub('df', 'if [[ "$MODE" == low_disk ]]; then printf "Avail\\n1\\n"; else printf "Avail\\n99999999999\\n"; fi');
+  stub('stat', 'echo 1');
+  stub('du', 'printf "100\\tfrontend\\n"');
   stub('rsync', 'printf "rsync\\n" >> "$LOG"; touch "$COPIED"');
   stub('sleep', 'exit 0');
   stub('sudo', `echo "$*" >> "$LOG"
 shift
 case "$*" in
+  'docker info --format {{.DockerRootDir}}') echo "$ROOT" ;;
+  'stat -c %d '*) if [[ "$MODE" == different_filesystem ]]; then echo 2; else echo 1; fi ;;
   'docker compose ps -q frontend') echo container ;;
   'docker run --rm --entrypoint node '*) echo 24 ;;
   'docker image inspect --format {{index .Config.Labels "org.opencontainers.image.revision"}} '*) echo '${'c'.repeat(40)}' ;;
@@ -125,7 +134,7 @@ done`);
   writeFileSync(helper, readFileSync('deploy/update-frontend.sh', 'utf8').replaceAll('/opt/aigc-prompt', root));
   const log = join(root, 'calls');
   try {
-    const result = spawnSync('bash', [helper, release, old, 'c'.repeat(40)], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, MODE: mode, LOG: log, STATE: join(root, 'state'), COPIED: join(root, 'copied') } });
+    const result = spawnSync('bash', [helper, release, old, 'c'.repeat(40)], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, MODE: mode, ROOT: root, LOG: log, STATE: join(root, 'state'), COPIED: join(root, 'copied') } });
     expect(result.status, result.stderr).toBe(status);
     const calls = readFileSync(log, 'utf8');
     if (mode === 'success') {
@@ -138,9 +147,11 @@ done`);
       expect(calls).toContain(`docker tag ${old} app:current`);
       expect(calls.match(/nginx -s reload/g)).toHaveLength(2);
     }
+    if (mode === 'different_filesystem') expect(result.stderr).toContain('different filesystems');
+    if (mode === 'low_disk') expect(result.stderr).toContain('Insufficient space');
     if (mode === 'stale_image') expect(calls).not.toContain('docker build');
     if (mode === 'post_copy_stale') expect(calls).not.toContain('docker compose up');
-    if (mode === 'missing_public' || mode === 'duplicate_public') {
+    if (mode === 'missing_public' || mode === 'duplicate_public' || mode === 'different_filesystem' || mode === 'low_disk') {
       expect(calls).not.toContain('docker build');
       expect(calls).not.toContain('rsync');
       expect(calls).not.toContain('docker compose up');
