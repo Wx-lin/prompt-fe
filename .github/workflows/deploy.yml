@@ -27,6 +27,7 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - run: node --test deploy/runtime-image.test.mjs deploy/release-rollback.test.mjs
       - name: Verify character assets in COS
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: node deploy/verify-character-assets.mjs "$GITHUB_SHA"
@@ -35,6 +36,8 @@ jobs:
           NEXT_PUBLIC_SITE_URL: https://aigc-prompt.com
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
         run: npm run build
+      - name: Verify runtime with Docker BuildKit
+        run: bash deploy/smoke-runtime-image.sh
       - name: Build and deploy committed release
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         env:
@@ -75,8 +78,31 @@ jobs:
           tar -czf release/runtime.tar.gz -C runtime .
           git archive "$GITHUB_SHA" Dockerfile .dockerignore .gitignore package.json package-lock.json next.config.ts tsconfig.json eslint.config.mjs messages src deploy docs/user-guide.md | gzip > release/source.tar.gz
           du -b release/runtime.tar.gz release/source.tar.gz
-          cp deploy/update-frontend.sh release/update-frontend.sh
-          (cd release && sha256sum runtime.tar.gz source.tar.gz update-frontend.sh > checksums.txt)
+          # The immutable upstream manifest and image ID are checked before creating
+          # an untagged transport archive. The server verifies every layer again.
+          source deploy/runtime-base.env
+          cp deploy/update-frontend.sh deploy/build-runtime-image.sh deploy/validate-runtime-base.py deploy/check-release-space.sh deploy/runtime-base.env release/
+          # Upload a base only when this exact image is missing on the server.
+          # A concurrent removal fails the deployment without switching versions.
+          # shellcheck disable=SC2029
+          remote_base=$(ssh "${ssh_opts[@]}" "$target" "sudo -n docker image inspect --format '{{.Id}}' $AIGC_RUNTIME_BASE_ID 2>/dev/null || true")
+          if [[ "$remote_base" != "$AIGC_RUNTIME_BASE_ID" ]]; then
+            docker pull --platform linux/amd64 "$AIGC_RUNTIME_BASE_REF"
+            [[ $(docker image inspect --format '{{.Id}} {{.Os}} {{.Architecture}}' "$AIGC_RUNTIME_BASE_REF") == "$AIGC_RUNTIME_BASE_ID linux amd64" ]]
+            docker save "$AIGC_RUNTIME_BASE_ID" | gzip -1 > release/base-image.tar.gz
+            python3 deploy/validate-runtime-base.py release/base-image.tar.gz "$AIGC_RUNTIME_BASE_ID"
+          fi
+          (cd release && sha256sum ./* > checksums.txt)
+          # Estimate peak on the target before uploading, then check again on
+          # the server while holding the release locks. All terms are bytes.
+          upload_bytes=$(du -cb release/* | tail -1 | cut -f1)
+          runtime_bytes=$(gzip -dc release/runtime.tar.gz | wc -c | tr -d ' ')
+          source_bytes=$(gzip -dc release/source.tar.gz | wc -c | tr -d ' ')
+          base_bytes=0
+          if [[ -f release/base-image.tar.gz ]]; then base_bytes=$(gzip -dc release/base-image.tar.gz | wc -c | tr -d ' '); fi
+          read -r backup_bytes available_bytes same_filesystem < <(ssh "${ssh_opts[@]}" "$target" 'root=$(sudo -n docker info --format "{{.DockerRootDir}}"); backup=$(du -sb /opt/aigc-prompt/frontend | cut -f1); free=$(df --output=avail -B1 /opt/aigc-prompt | tail -1); if [ "$(stat -c %d /opt/aigc-prompt)" = "$(sudo -n stat -c %d "$root")" ]; then same=yes; else same=no; fi; echo "$backup $free $same"')
+          [[ "$same_filesystem" == yes ]] || { echo 'Docker and release use different filesystems; space peak unverified' >&2; exit 1; }
+          bash deploy/check-release-space.sh "$backup_bytes" "$runtime_bytes" "$source_bytes" "$base_bytes" "$upload_bytes" "$available_bytes"
           # Validated release names and hashes intentionally expand before SSH.
           # shellcheck disable=SC2029
           ssh "${ssh_opts[@]}" "$target" "umask 077; mkdir -p /opt/aigc-prompt/releases/$release"

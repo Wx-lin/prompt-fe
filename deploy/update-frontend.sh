@@ -14,7 +14,17 @@ flock -w 600 8
 incoming="$PWD/releases/$release"
 cd "$incoming"
 sha256sum -c checksums.txt
-[[ $(df --output=avail -B1 /opt/aigc-prompt | tail -1) -ge 2147483648 ]] || { echo 'Less than 2 GiB free; stopped'; exit 1; }
+# Reject a split Docker filesystem: this estimate is valid only when all
+# artifacts, image layers and backups consume the same filesystem.
+docker_root=$(sudo -n docker info --format '{{.DockerRootDir}}')
+[[ "$(stat -c %d /opt/aigc-prompt)" == "$(sudo -n stat -c %d "$docker_root")" ]] || { echo 'Docker and release use different filesystems; space peak unverified' >&2; exit 1; }
+backup_bytes=$(du -sb /opt/aigc-prompt/frontend | cut -f1)
+runtime_bytes=$(gzip -dc runtime.tar.gz | wc -c | tr -d ' ')
+source_bytes=$(gzip -dc source.tar.gz | wc -c | tr -d ' ')
+base_bytes=0
+if [[ -f base-image.tar.gz ]]; then base_bytes=$(gzip -dc base-image.tar.gz | wc -c | tr -d ' '); fi
+available_bytes=$(df --output=avail -B1 /opt/aigc-prompt | tail -1 | tr -d ' ')
+bash "$incoming/check-release-space.sh" "$backup_bytes" "$runtime_bytes" "$source_bytes" "$base_bytes" 0 "$available_bytes"
 cd /opt/aigc-prompt
 sudo -n docker compose config --quiet
 container=$(sudo -n docker compose ps -q frontend)
@@ -73,22 +83,10 @@ cp -a "$incoming/runtime/app/public" "$incoming/source/public"
 node_major=$(sudo -n docker run --rm --entrypoint node "$current" -p 'process.versions.node.split(".")[0]')
 [[ "$node_major" == 24 ]] || { echo 'Existing runtime must use Node 24'; exit 1; }
 candidate="aigc-frontend:$release"
-cat > "$incoming/runtime/Dockerfile" <<DOCKERFILE
-FROM aigc-frontend:rollback-$release
-USER root
-RUN rm -rf /app
-COPY --chown=node:node app/ /app/
-WORKDIR /app
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000 AIGC_DEMO_MODE=false
-LABEL org.opencontainers.image.revision="$revision"
-USER node
-EXPOSE 3000
-CMD ["node", "server.js"]
-DOCKERFILE
-sudo -n docker build --pull=false --network=none -t "$candidate" "$incoming/runtime" > "$incoming/build.log" 2>&1 || {
-  tail -40 "$incoming/build.log"
-  exit 1
-}
+# Pinned base identity is part of the checksummed release, sourced from this
+# committed revision; helper validates the archive before any docker load.
+source "$incoming/runtime-base.env"
+bash "$incoming/build-runtime-image.sh" "$incoming" "$candidate" "$revision" "$AIGC_RUNTIME_BASE_ID"
 [[ $(sudo -n docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$candidate") == "$revision" ]]
 # Preserve deployment-only environments and local dependencies.
 source_changed=true
