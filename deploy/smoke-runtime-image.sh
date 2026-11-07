@@ -18,7 +18,8 @@ git archive "$GITHUB_SHA" -- public ':(exclude)public/character-library' ':(excl
 test -f "$work/runtime/app/server.js"
 sudo -n docker pull --platform linux/amd64 "$AIGC_RUNTIME_BASE_REF"
 [[ $(sudo -n docker image inspect --format '{{.Id}} {{.Os}} {{.Architecture}}' "$AIGC_RUNTIME_BASE_REF") == "$AIGC_RUNTIME_BASE_ID linux amd64" ]]
-sudo -n docker save "$AIGC_RUNTIME_BASE_ID" | gzip -1 > "$work/base-image.tar.gz"
+sudo -n docker save "$AIGC_RUNTIME_BASE_ID" | gzip -1 > "$work/base-image.raw.tar.gz"
+python3 deploy/validate-runtime-base.py "$work/base-image.raw.tar.gz" "$AIGC_RUNTIME_BASE_ID" "$work/base-image.tar.gz"
 python3 deploy/validate-runtime-base.py "$work/base-image.tar.gz" "$AIGC_RUNTIME_BASE_ID"
 # This job runs on a fresh GitHub-hosted runner. Remove only the exact base
 # reference just pulled, then require the image ID to be absent so the helper

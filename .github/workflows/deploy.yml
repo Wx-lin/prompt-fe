@@ -89,7 +89,8 @@ jobs:
           if [[ "$remote_base" != "$AIGC_RUNTIME_BASE_ID" ]]; then
             docker pull --platform linux/amd64 "$AIGC_RUNTIME_BASE_REF"
             [[ $(docker image inspect --format '{{.Id}} {{.Os}} {{.Architecture}}' "$AIGC_RUNTIME_BASE_REF") == "$AIGC_RUNTIME_BASE_ID linux amd64" ]]
-            docker save "$AIGC_RUNTIME_BASE_ID" | gzip -1 > release/base-image.tar.gz
+            docker save "$AIGC_RUNTIME_BASE_ID" | gzip -1 > "$RUNNER_TEMP/aigc-base.raw.tar.gz"
+            python3 deploy/validate-runtime-base.py "$RUNNER_TEMP/aigc-base.raw.tar.gz" "$AIGC_RUNTIME_BASE_ID" release/base-image.tar.gz
             python3 deploy/validate-runtime-base.py release/base-image.tar.gz "$AIGC_RUNTIME_BASE_ID"
           fi
           (cd release && sha256sum ./* > checksums.txt)
